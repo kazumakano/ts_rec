@@ -7,7 +7,7 @@ import yaml
 from torchvision.transforms import functional as TF
 
 
-def aug_by_translation(img: torch.Tensor, aug_num: int = 8, max_shift_len: int = 5) -> torch.Tensor:
+def aug_by_translation(img: torch.Tensor, aug_num: int, max_shift_len: int) -> torch.Tensor:
     """
     Augment image of timestamp figure by randomly translation.
 

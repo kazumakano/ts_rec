@@ -1,3 +1,4 @@
 *.ipynb
+config/
 result/
 script/__pycache__/
