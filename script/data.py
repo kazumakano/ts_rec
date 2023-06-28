@@ -1,6 +1,6 @@
 import os.path as path
 from datetime import timedelta
-from glob import glob
+from glob import glob, iglob
 from typing import Optional
 import numpy as np
 import pytorch_lightning as pl
@@ -12,10 +12,9 @@ from . import utility as util
 
 
 class TsFigDataset(data.Dataset):
-    def __init__(self, dir: str, aug_num: int = 8, max_shift_len: int = 5) -> None:
+    def __init__(self, files: list[str], aug_num: int = 8, max_shift_len: int = 5) -> None:
         self.aug_num = aug_num
 
-        files = glob(path.join(dir, "*_[0-9].tif"))
         self.img = torch.empty((self.aug_num * len(files), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(len(files), dtype=torch.int64)
         for i, f in enumerate(files):
@@ -29,8 +28,7 @@ class TsFigDataset(data.Dataset):
         return len(self.img)
 
 class VidDataset(data.Dataset):
-    def __init__(self, dir: str) -> None:
-        files = glob(path.join(dir, "camera*/video_??-??-??_??.mkv"))
+    def __init__(self, files: list[str]) -> None:
         self.cam_name = np.empty(len(files), dtype="<U3")
         self.vid_idx = np.empty(len(files), dtype=np.int32)
         self.img = torch.empty((len(files), 6, 3, 22, 17), dtype=torch.float32)
@@ -49,10 +47,11 @@ class VidDataset(data.Dataset):
         return 6 * len(self.label)
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, seed: int = 0, ts_fig_dir: Optional[str] = None, vid_dir: Optional[str] = None) -> None:
+    def __init__(self, ts_fig_dir: Optional[str] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0, ) -> None:
         super().__init__()
 
         self.dataset = {}
+        self.exclude = None if ex_file is None else util.load_param(ex_file)
         self.seed = seed
         self.ts_fig_dir = ts_fig_dir
         self.vid_dir = vid_dir
@@ -60,10 +59,17 @@ class DataModule(pl.LightningDataModule):
     def setup(self, stage: str) -> None:
         match stage:
             case "fit" | "test":
-                if self.ts_fig_dir is not None and "train" not in self.dataset.keys():
-                    self.dataset["train"], self.dataset["validate"], self.dataset["test"] = data.random_split(TsFigDataset(self.ts_fig_dir), (0.8, 0.1, 0.1), generator=torch.Generator().manual_seed(self.seed))
+                if "train" not in self.dataset.keys():
+                    files = glob(path.join(self.ts_fig_dir, "*_[0-9].tif"))
+                    self.dataset["train"], self.dataset["validate"], self.dataset["test"] = data.random_split(TsFigDataset(files), (0.8, 0.1, 0.1), generator=torch.Generator().manual_seed(self.seed))
             case "predict":
-                self.dataset["predict"] = VidDataset(self.vid_dir)
+                files = []
+                for d in iglob(path.join(self.vid_dir, "camera*")):
+                    if self.exclude is None or self.exclude["camera"] is None or path.basename(d)[6:] not in self.exclude["camera"]:
+                        for f in iglob(path.join(d, "video_??-??-??_??.mkv")):
+                            if self.exclude is None or self.exclude["index"] is None or int(f[-6:-4]) not in self.exclude["index"]:
+                                files.append(f)
+                self.dataset["predict"] = VidDataset(sorted(files))
 
     def train_dataloader(self) -> data.DataLoader:
         return data.DataLoader(self.dataset["train"], batch_size=256, shuffle=True, num_workers=4)
