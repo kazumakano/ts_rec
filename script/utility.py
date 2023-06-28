@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import cv2
 import numpy as np
 import torch
+import yaml
 from torchvision.transforms import functional as TF
 
 
@@ -80,6 +81,10 @@ def get_result_dir(dir_name: str | None) -> str:
         dir_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     return path.join(path.dirname(__file__), "../result/", dir_name)
+
+def load_param(file: str) -> dict[str, int]:
+    with open(file) as f:
+        return yaml.safe_load(f)
 
 def read_1st_frm(file: str) -> np.ndarray:
     return cv2.VideoCapture(filename=file).read()[1]
