@@ -1,0 +1,11 @@
+ipykernel
+matplotlib
+numpy
+opencv-python
+Pillow
+pytorch-lightning
+scipy
+tensorboard
+torch
+torch-tb-profiler
+torchvision
