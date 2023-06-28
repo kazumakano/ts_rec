@@ -4,6 +4,7 @@ numpy
 opencv-python
 Pillow
 pytorch-lightning
+PyYAML
 scipy
 tensorboard
 torch

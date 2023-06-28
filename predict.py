@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--param_file", required=True, help="specify parameter file", metavar="PATH_TO_PARAM_FILE")
     parser.add_argument("-d", "--vid_dir", required=True, help="specify video directory", metavar="PATH_TO_VID_DIR")
     parser.add_argument("-g", "--gpu_id", default=0, type=int, help="specify GPU device ID", metavar="GPU_ID")
-    parser.add_argument("-r", "--result_file_name", help="specify result file name", metavar="RESULT_FILE_NAME")
+    parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
     args = parser.parse_args()
 
-    run(args.ckpt_file, args.gpu_id, args.param_file, args.vid_dir, args.result_file_name)
+    run(args.ckpt_file, args.gpu_id, args.param_file, args.vid_dir, args.result_dir_name)

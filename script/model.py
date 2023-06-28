@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
+from . import utility as util
 
 
 class _BaseModule(pl.LightningModule):
@@ -54,8 +55,11 @@ class _BaseModule(pl.LightningModule):
         return estim
 
     def on_predict_end(self) -> None:
+        estim = torch.stack(self.predict_outputs).cpu().numpy()
+
         with open(path.join(self.logger.log_dir, "predict_outputs.pkl"), mode="wb") as f:
-            pickle.dump((self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, self.trainer.predict_dataloaders.dataset.img.numpy(), torch.stack(self.predict_outputs).cpu().numpy(), self.trainer.predict_dataloaders.dataset.label), f)
+            pickle.dump((self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, self.trainer.predict_dataloaders.dataset.img.numpy(), estim, self.trainer.predict_dataloaders.dataset.label), f)
+        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim, self.logger.log_dir)
 
 class CNN(_BaseModule):
     def __init__(self, param: dict[str, int]) -> None:

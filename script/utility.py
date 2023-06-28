@@ -1,9 +1,11 @@
+import csv
 import os.path as path
 from datetime import datetime, timedelta
 import cv2
 import numpy as np
 import torch
 import yaml
+from scipy.special import softmax
 from torchvision.transforms import functional as TF
 
 
@@ -88,3 +90,12 @@ def load_param(file: str) -> dict[str, int]:
 
 def read_1st_frm(file: str) -> np.ndarray:
     return cv2.VideoCapture(filename=file).read()[1]
+
+def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, result_dir: str) -> None:
+    ts = softmax(ts, axis=2).argmax(axis=2)
+
+    with open(path.join(result_dir, "predict_results.csv"), mode="w") as f:
+        writer = csv.writer(f)
+
+        for i in range(len(cam_name)):
+            writer.writerow((cam_name[i], vid_idx[i], f"{ts[i, 0]}{ts[i, 1]}:{ts[i, 2]}{ts[i, 3]}:{ts[i, 4]}{ts[i, 5]}"))
