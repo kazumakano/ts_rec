@@ -61,6 +61,8 @@ class CNN(_BaseModule):
     def __init__(self, param: dict[str, int]) -> None:
         super().__init__()
 
+        self.save_hyperparameters(param)
+
         self.conv_1 = nn.Conv2d(3, param["conv_1_ch"], param["conv_ks"])
         self.conv_2 = nn.Conv2d(param["conv_1_ch"], param["conv_2_ch"], param["conv_ks"])
         self.fc = nn.Linear((24 - 2 * param["conv_ks"]) * (19 - 2 * param["conv_ks"]) * param["conv_2_ch"], 10)
