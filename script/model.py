@@ -59,7 +59,7 @@ class _BaseModule(pl.LightningModule):
 
         with open(path.join(self.logger.log_dir, "predict_outputs.pkl"), mode="wb") as f:
             pickle.dump((self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, self.trainer.predict_dataloaders.dataset.img.numpy(), estim, self.trainer.predict_dataloaders.dataset.label), f)
-        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim, self.logger.log_dir)
+        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.logger.log_dir)
 
 class CNN(_BaseModule):
     def __init__(self, param: dict[str, int]) -> None:
@@ -67,11 +67,11 @@ class CNN(_BaseModule):
 
         self.save_hyperparameters(param)
 
-        self.conv_1 = nn.Conv2d(3, param["conv_1_ch"], param["conv_ks"])
-        self.conv_2 = nn.Conv2d(param["conv_1_ch"], param["conv_2_ch"], param["conv_ks"])
-        self.fc = nn.Linear((24 - 2 * param["conv_ks"]) * (19 - 2 * param["conv_ks"]) * param["conv_2_ch"], 10)
+        self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], param["conv_ks_1"])
+        self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], param["conv_ks_2"])
+        self.fc = nn.Linear((24 - param["conv_ks_1"] - param["conv_ks_2"]) * (19 - param["conv_ks_1"] - param["conv_ks_2"]) * param["conv_ch_2"], 10)
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, channel)
+    def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
         hidden = F.dropout(F.relu(self.conv_1(input)), training=self.training)
         hidden = F.dropout(F.relu(self.conv_2(hidden)), training=self.training)
         output = self.fc(hidden.flatten(start_dim=1))
@@ -92,7 +92,7 @@ class FullNet(_BaseModule):
             nn.Linear(64, 10),
         )
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, channel)
+    def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
         output = self.layer1(input.flatten(start_dim=1))
 
         return output

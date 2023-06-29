@@ -10,7 +10,7 @@ from script.data import DataModule
 from script.model import CNN
 
 
-def run(gpu_id: int, param_file: str, ts_fig_dir: str, ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
+def train(gpu_id: int, param_file: str, ts_fig_dir: str, ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
     torch.set_float32_matmul_precision("high")
 
     param = util.load_param(param_file)
@@ -44,4 +44,4 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
     args = parser.parse_args()
 
-    run(args.gpu_id, args.param_file, args.ts_fig_dir, args.ckpt_file, args.result_dir_name)
+    train(args.gpu_id, args.param_file, args.ts_fig_dir, args.ckpt_file, args.result_dir_name)

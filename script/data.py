@@ -12,14 +12,16 @@ from . import utility as util
 
 
 class TsFigDataset(data.Dataset):
-    def __init__(self, files: list[str], aug_num: int = 8, max_shift_len: int = 5) -> None:
+    def __init__(self, files: list[str], aug_num: int = 64, brightness: float = 0.5, contrast: float = 0.5, max_shift_len: int = 5, norm: bool = False) -> None:
         self.aug_num = aug_num
 
         self.img = torch.empty((self.aug_num * len(files), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(len(files), dtype=torch.int64)
         for i, f in enumerate(files):
-            self.img[self.aug_num * i:self.aug_num * i + self.aug_num] = TF.normalize(util.aug_by_translation(TF.to_tensor(Image.open(f)), self.aug_num, max_shift_len), (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            self.img[self.aug_num * i:self.aug_num * i + self.aug_num] = util.aug_img(TF.to_tensor(Image.open(f)), self.aug_num, brightness, contrast, max_shift_len)
             self.label[i] = int(f[-5])
+        if norm:
+            self.img = TF.normalize(self.img, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         return self.img[idx], self.label[idx // self.aug_num]
@@ -28,7 +30,7 @@ class TsFigDataset(data.Dataset):
         return len(self.img)
 
 class VidDataset(data.Dataset):
-    def __init__(self, files: list[str]) -> None:
+    def __init__(self, files: list[str], norm: bool = False) -> None:
         self.cam_name = np.empty(len(files), dtype="<U3")
         self.vid_idx = np.empty(len(files), dtype=np.int32)
         self.img = torch.empty((len(files), 6, 3, 22, 17), dtype=torch.float32)
@@ -36,8 +38,10 @@ class VidDataset(data.Dataset):
         for i, f in enumerate(files):
             self.cam_name[i] = path.basename(path.dirname(f))[6:]
             self.vid_idx[i] = int(f[-6:-4])
-            for j, tmp_img in enumerate(util.extract_ts_fig(util.read_1st_frm(f))):
-                self.img[i, j] = TF.normalize(TF.to_tensor(tmp_img), (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            for j, tmp_img in enumerate(util.extract_ts_fig(util.read_head_n_frms(f, 1).squeeze())):
+                self.img[i, j] = TF.to_tensor(tmp_img)
+            if norm:
+                self.img[i] = TF.normalize(self.img[i], (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             self.label[i] = util.calc_ts_from_name(f)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
@@ -47,7 +51,7 @@ class VidDataset(data.Dataset):
         return 6 * len(self.label)
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, ts_fig_dir: Optional[str] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0, ) -> None:
+    def __init__(self, ts_fig_dir: Optional[str] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
         super().__init__()
 
         self.dataset = {}

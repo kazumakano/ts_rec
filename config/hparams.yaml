@@ -1,4 +1,5 @@
-conv_1_ch: 64
-conv_2_ch: 32
-conv_ks: 5
+conv_ch_1: 64
+conv_ch_2: 32
+conv_ks_1: 7
+conv_ks_2: 3
 max_epoch: 100
