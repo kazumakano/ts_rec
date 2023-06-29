@@ -10,3 +10,4 @@ tensorboard
 torch
 torch-tb-profiler
 torchvision
+tqdm

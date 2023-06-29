@@ -8,6 +8,7 @@ import torch
 from PIL import Image
 from torch.utils import data
 from torchvision.transforms import functional as TF
+from tqdm import tqdm
 from . import utility as util
 
 
@@ -17,7 +18,7 @@ class TsFigDataset(data.Dataset):
 
         self.img = torch.empty((self.aug_num * len(files), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(len(files), dtype=torch.int64)
-        for i, f in enumerate(files):
+        for i, f in enumerate(tqdm(files, desc="loading timestamp figure images")):
             self.img[self.aug_num * i:self.aug_num * i + self.aug_num] = util.aug_img(TF.to_tensor(Image.open(f)), self.aug_num, brightness, contrast, max_shift_len)
             self.label[i] = int(f[-5])
         if norm:
@@ -35,7 +36,7 @@ class VidDataset(data.Dataset):
         self.vid_idx = np.empty(len(files), dtype=np.int32)
         self.img = torch.empty((len(files), 6, 3, 22, 17), dtype=torch.float32)
         self.label = np.empty(len(files), dtype=timedelta)
-        for i, f in enumerate(files):
+        for i, f in enumerate(tqdm(files, desc="loading videos")):
             self.cam_name[i] = path.basename(path.dirname(f))[6:]
             self.vid_idx[i] = int(f[-6:-4])
             for j, tmp_img in enumerate(util.extract_ts_fig(util.read_head_n_frms(f, 1).squeeze())):
