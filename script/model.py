@@ -57,8 +57,27 @@ class _BaseModule(pl.LightningModule):
     def on_predict_end(self) -> None:
         estim = torch.stack(self.predict_outputs).cpu().numpy()
 
-        with open(path.join(self.logger.log_dir, "predict_outputs.pkl"), mode="wb") as f:
-            pickle.dump((self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, self.trainer.predict_dataloaders.dataset.img.numpy(), estim, self.trainer.predict_dataloaders.dataset.label), f)
+        outputs_file = path.join(self.logger.log_dir, "predict_outputs.pkl")
+        if path.exists(outputs_file):
+            with open(outputs_file, mode="rb") as f:
+                pre_cam_name, pre_vid_idx, pre_img, pre_estim, pre_label = pickle.load(f)
+            with open(outputs_file, mode="wb") as f:
+                pickle.dump((
+                    np.hstack((pre_cam_name, self.trainer.predict_dataloaders.dataset.cam_name)),
+                    np.hstack((pre_vid_idx, self.trainer.predict_dataloaders.dataset.vid_idx)),
+                    np.vstack((pre_img, self.trainer.predict_dataloaders.dataset.img.numpy())),
+                    np.vstack((pre_estim, estim)),
+                    np.hstack((pre_label, self.trainer.predict_dataloaders.dataset.label))
+                ), f)
+        else:
+            with open(outputs_file, mode="wb") as f:
+                pickle.dump((
+                    self.trainer.predict_dataloaders.dataset.cam_name,
+                    self.trainer.predict_dataloaders.dataset.vid_idx,
+                    self.trainer.predict_dataloaders.dataset.img.numpy(),
+                    estim,
+                    self.trainer.predict_dataloaders.dataset.label
+                ), f)
         util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.logger.log_dir)
 
 class CNN(_BaseModule):

@@ -1,22 +1,38 @@
+import logging
+import os.path as path
+from glob import iglob
 from typing import Optional
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.loggers import TensorBoardLogger
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 import script.utility as util
-from script.data import DataModule
+from script.data import VidDataset
 from script.model import CNN
 
 
 def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
+    logging.disable()
     torch.set_float32_matmul_precision("high")
 
+    model = CNN.load_from_checkpoint(ckpt_file, param=util.load_param(param_file))
     trainer = pl.Trainer(
-        logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
+        accelerator="gpu",
         devices=[gpu_id],
-        accelerator="gpu"
+        logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
+        enable_progress_bar=False
     )
 
-    trainer.predict(model=CNN.load_from_checkpoint(ckpt_file, param=util.load_param(param_file)), datamodule=DataModule(vid_dir=vid_dir, ex_file=ex_file))
+    exclude = None if ex_file is None else util.load_param(ex_file)
+    for d in tqdm(sorted(iglob(path.join(vid_dir, "camera*"))), desc="recognizing"):
+        if exclude is None or exclude["camera"] is None or path.basename(d)[6:] not in exclude["camera"]:
+            files = []
+            for f in sorted(iglob(path.join(d, "video_??-??-??_??.mkv"))):
+                if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
+                    files.append(f)
+
+            trainer.predict(model=model, dataloaders=DataLoader(VidDataset(files, show_progress=False), batch_size=6, num_workers=4))
 
 if __name__ == "__main__":
     import argparse

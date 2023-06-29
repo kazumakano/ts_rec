@@ -31,12 +31,12 @@ class TsFigDataset(data.Dataset):
         return len(self.img)
 
 class VidDataset(data.Dataset):
-    def __init__(self, files: list[str], norm: bool = False) -> None:
+    def __init__(self, files: list[str], norm: bool = False, show_progress: bool = True) -> None:
         self.cam_name = np.empty(len(files), dtype="<U3")
         self.vid_idx = np.empty(len(files), dtype=np.int32)
         self.img = torch.empty((len(files), 6, 3, 22, 17), dtype=torch.float32)
         self.label = np.empty(len(files), dtype=timedelta)
-        for i, f in enumerate(tqdm(files, desc="loading videos")):
+        for i, f in enumerate(tqdm(files, desc="loading videos", disable=not show_progress)):
             self.cam_name[i] = path.basename(path.dirname(f))[6:]
             self.vid_idx[i] = int(f[-6:-4])
             for j, tmp_img in enumerate(util.extract_ts_fig(util.read_head_n_frms(f, 1).squeeze())):

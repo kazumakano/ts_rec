@@ -131,10 +131,11 @@ def read_head_n_frms(file: str, n: int) -> np.ndarray:
     return np.stack(frms)
 
 def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, result_dir: str) -> None:
-    with open(path.join(result_dir, "predict_results.csv"), mode="w") as f:
+    with open(path.join(result_dir, "predict_results.csv"), mode="a") as f:
         writer = csv.writer(f)
 
-        writer.writerow(("cam", "idx", "recog", "diff_in_sec"))
+        if f.tell() == 0:
+            writer.writerow(("cam", "idx", "recog", "diff_in_sec"))
         for i in range(len(cam_name)):
             writer.writerow((
                 cam_name[i],
