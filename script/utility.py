@@ -11,7 +11,7 @@ from torchvision import transforms as T
 
 def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float, max_shift_len: int) -> torch.Tensor:
     """
-    Augment image of timestamp figure by randomly coloring and translation.
+    Augment image by randomly coloring and translation.
 
     Parameters
     ----------
@@ -30,20 +30,20 @@ def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float,
     Returns
     -------
     imgs : Tensor[float32]
-        Translated images.
+        Augmented images.
         Shape is (aug_num, channel, height, width).
     """
 
     jitter_color = T.ColorJitter(brightness=brightness, contrast=contrast)
     translate = T.RandomAffine(0, translate=(max_shift_len / img.shape[2], max_shift_len / img.shape[1]))
 
-    auged_imgs = torch.empty((aug_num, 3, 22, 17), dtype=torch.float32)
+    auged_imgs = torch.empty((aug_num, *img.shape), dtype=torch.float32)
     for i in range(aug_num):
         auged_imgs[i] = translate(jitter_color(img))
 
     return auged_imgs
 
-def calc_ts_from_name(file: str, sec_per_file: float = 1791) -> timedelta:
+def calc_ts_from_name(file: str, sec_per_file: float) -> timedelta:
     """
     Roughly calculate timestamp based on video file name.
 
@@ -64,12 +64,12 @@ def calc_ts_from_name(file: str, sec_per_file: float = 1791) -> timedelta:
 
 def extract_ts_fig(frm: np.ndarray) -> np.ndarray:
     """
-    Extract images of timestamp figures on video frame.
+    Extract images of timestamp figures from video frame.
 
     Parameters
     ----------
     frm : ndarray[uint8]
-        Frame image to extract.
+        Frame image.
         Shape is (height, width, channel).
 
     Returns
@@ -87,8 +87,7 @@ def extract_ts_fig(frm: np.ndarray) -> np.ndarray:
 
 def get_most_likely_ts(estim: np.ndarray) -> np.ndarray:
     """
-    Decide most likely timestamps based on model outputs.
-    Eliminate invalid timestamps.
+    Decide most likely timestamps based on model outputs, eliminating invalid timestamps.
 
     Parameters
     ----------
@@ -137,9 +136,4 @@ def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarr
         if f.tell() == 0:
             writer.writerow(("cam", "idx", "recog", "diff_in_sec"))
         for i in range(len(cam_name)):
-            writer.writerow((
-                cam_name[i],
-                vid_idx[i],
-                str(ts[i]),
-                ts[i].total_seconds() - label[i].total_seconds()
-            ))
+            writer.writerow((cam_name[i], vid_idx[i], str(ts[i]), ts[i].total_seconds() - label[i].total_seconds()))

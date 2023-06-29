@@ -43,7 +43,7 @@ class VidDataset(data.Dataset):
                 self.img[i, j] = TF.to_tensor(tmp_img)
             if norm:
                 self.img[i] = TF.normalize(self.img[i], (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            self.label[i] = util.calc_ts_from_name(f)
+            self.label[i] = util.calc_ts_from_name(f, 1791)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         return self.img[idx // 6, idx % 6]
@@ -77,13 +77,13 @@ class DataModule(pl.LightningDataModule):
                 self.dataset["predict"] = VidDataset(sorted(files))
 
     def train_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["train"], batch_size=256, shuffle=True, num_workers=4)
+        return data.DataLoader(self.dataset["train"], batch_size=512, shuffle=True, num_workers=4)
 
     def val_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["validate"], batch_size=256, num_workers=4)
+        return data.DataLoader(self.dataset["validate"], batch_size=512, num_workers=4)
 
     def test_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["test"], batch_size=256, num_workers=4)
+        return data.DataLoader(self.dataset["test"], batch_size=512, num_workers=4)
 
     def predict_dataloader(self) -> data.DataLoader:
         return data.DataLoader(self.dataset["predict"], batch_size=6, num_workers=4)
