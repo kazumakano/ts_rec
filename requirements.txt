@@ -6,6 +6,7 @@ Pillow
 pytorch-lightning
 PyYAML
 scipy
+streamlit
 tensorboard
 torch
 torch-tb-profiler

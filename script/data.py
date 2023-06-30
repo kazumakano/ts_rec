@@ -30,6 +30,14 @@ class TsFigDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.img)
 
+    @property
+    def breakdown(self) -> dict[int, int]:
+        breakdown = {}
+        for k in np.unique(self.label):
+            breakdown[k] = len(self.label[self.label == k])
+
+        return breakdown
+
 class VidDataset(data.Dataset):
     def __init__(self, files: list[str], norm: bool = False, show_progress: bool = True) -> None:
         self.cam_name = np.empty(len(files), dtype="<U3")
