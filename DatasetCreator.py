@@ -92,11 +92,11 @@ def render() -> None:
                     with c:
                         _label_btn(cam_name, img, i, usr_name, vid_date)
 
-                cols = st.columns(8)
-                with cols[0]:
-                    st.button("undo", on_click=lambda: _undo(cam_name, vid_date), disabled=st.session_state["vid_idx"] == 0 and st.session_state["digit"] == 0)
-                with cols[1]:
-                    st.button("skip", on_click=_next_states)
+            cols = st.columns(8)
+            with cols[0]:
+                st.button("undo", on_click=lambda: _undo(cam_name, vid_date), disabled=st.session_state["vid_idx"] == 0 and st.session_state["digit"] == 0)
+            with cols[1]:
+                st.button("skip", on_click=_next_states)
 
 if __name__ == "__main__":
     if len(st.session_state) == 0:
