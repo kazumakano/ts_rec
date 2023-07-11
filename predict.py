@@ -18,7 +18,7 @@ def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file:
 
     param = util.load_param(param_file)
 
-    model = CNNDeep.load_from_checkpoint(ckpt_file, param=param, ce_loss_weight=torch.empty(10, dtype=torch.float32))
+    model = CNNDeep.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[gpu_id],

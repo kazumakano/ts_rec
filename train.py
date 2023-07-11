@@ -28,9 +28,9 @@ def train(gpu_id: int, param_file: str, ts_fig_dir: str, ckpt_file: Optional[str
         datamodule.setup("fit")
         model = CNNDeep(param, torch.Tensor([len(datamodule.dataset["train"]) / v for v in datamodule.dataset["train"].breakdown.values()]))
         trainer.fit(model, datamodule=datamodule)
-        model.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0], ce_loss_weight=torch.empty(10, dtype=torch.float32))
+        model.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0], loss_weight=torch.empty(10, dtype=torch.float32))
     else:
-        model = CNNDeep.load_from_checkpoint(ckpt_file, param=param, ce_loss_weight=torch.empty(10, dtype=torch.float32))
+        model = CNNDeep.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
 
     trainer.test(model=model, datamodule=datamodule)
 
