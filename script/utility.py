@@ -8,8 +8,9 @@ import yaml
 from scipy.special import softmax
 from torchvision import transforms as T
 
+Param = float | int
 
-def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float, max_shift_len: int) -> torch.Tensor:
+def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float, hue: float, max_shift_len: int) -> torch.Tensor:
     """
     Augment image by randomly coloring and translation.
 
@@ -24,6 +25,8 @@ def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float,
         How much to jitter brightness.
     contrast : float
         How much to jitter contrast.
+    hue : float
+        How much to jitter hue.
     max_shift_len : int
         Maximum length to shift image.
 
@@ -34,11 +37,12 @@ def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float,
         Shape is (aug_num, channel, height, width).
     """
 
-    jitter_color = T.ColorJitter(brightness=brightness, contrast=contrast)
+    jitter_color = T.ColorJitter(brightness=brightness, contrast=contrast, hue=hue)
     translate = T.RandomAffine(0, translate=(max_shift_len / img.shape[2], max_shift_len / img.shape[1]))
 
     auged_imgs = torch.empty((aug_num, *img.shape), dtype=torch.float32)
-    for i in range(aug_num):
+    auged_imgs[0] = img
+    for i in range(1, aug_num):
         auged_imgs[i] = translate(jitter_color(img))
 
     return auged_imgs
@@ -117,6 +121,25 @@ def get_result_dir(dir_name: str | None) -> str:
 def load_param(file: str) -> dict[str, int | list[int] | list[str]]:
     with open(file) as f:
         return yaml.safe_load(f)
+
+def random_split(files: list[str], prop: tuple[float, float, float], seed: int = 0) -> tuple[list[str], list[str], list[str]]:
+    mixed_idxes = torch.randperm(len(files), generator=torch.Generator().manual_seed(seed), dtype=torch.int32).numpy()
+
+    train_num = round(prop[0] * len(mixed_idxes) / sum(prop))
+    train_files = []
+    for i in mixed_idxes[:train_num]:
+        train_files.append(files[i])
+
+    val_num = round(prop[1] * len(mixed_idxes) / sum(prop))
+    val_files = []
+    for i in mixed_idxes[train_num:train_num + val_num]:
+        val_files.append(files[i])
+
+    test_files = []
+    for i in mixed_idxes[train_num + val_num:]:
+        test_files.append(files[i])
+
+    return train_files, val_files, test_files
 
 def read_head_n_frms(file: str, n: int) -> np.ndarray:
     cap = cv2.VideoCapture(filename=file)

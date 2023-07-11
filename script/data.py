@@ -13,13 +13,13 @@ from . import utility as util
 
 
 class TsFigDataset(data.Dataset):
-    def __init__(self, files: list[str], aug_num: int = 64, brightness: float = 0.5, contrast: float = 0.5, max_shift_len: int = 5, norm: bool = False) -> None:
+    def __init__(self, files: list[str], aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False) -> None:
         self.aug_num = aug_num
 
         self.img = torch.empty((self.aug_num * len(files), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(len(files), dtype=torch.int64)
         for i, f in enumerate(tqdm(files, desc="loading timestamp figure images")):
-            self.img[self.aug_num * i:self.aug_num * i + self.aug_num] = util.aug_img(TF.to_tensor(Image.open(f)), self.aug_num, brightness, contrast, max_shift_len)
+            self.img[self.aug_num * i:self.aug_num * i + self.aug_num] = util.aug_img(TF.to_tensor(Image.open(f)), self.aug_num, brightness, contrast, hue, max_shift_len)
             self.label[i] = int(f[-5])
         if norm:
             self.img = TF.normalize(self.img, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -60,38 +60,45 @@ class VidDataset(data.Dataset):
         return 6 * len(self.label)
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, ts_fig_dir: Optional[str] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
+    def __init__(self, ts_fig_dir: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
         super().__init__()
 
         self.dataset = {}
-        self.exclude = None if ex_file is None else util.load_param(ex_file)
-        self.seed = seed
-        self.ts_fig_dir = ts_fig_dir
-        self.vid_dir = vid_dir
+
+        if ts_fig_dir is not None:
+            files = []
+            for d in ts_fig_dir:
+                files += glob(path.join(d, "*_[0-9].tif"))
+            self.train_files, self.val_files, self.test_files = util.random_split(files, (0.8, 0.1, 0.1), seed)
+
+        if vid_dir is not None:
+            exclude = None if ex_file is None else util.load_param(ex_file)
+            self.predict_files = []
+            for d in sorted(iglob(path.join(vid_dir, "camera*"))):
+                if exclude is None or exclude["camera"] is None or path.basename(d)[6:] not in exclude["camera"]:
+                    for f in sorted(iglob(path.join(d, "video_??-??-??_??.mkv"))):
+                        if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
+                            self.predict_files.append(f)
 
     def setup(self, stage: str) -> None:
         match stage:
-            case "fit" | "test":
+            case "fit":
                 if "train" not in self.dataset.keys():
-                    files = glob(path.join(self.ts_fig_dir, "*_[0-9].tif"))
-                    self.dataset["train"], self.dataset["validate"], self.dataset["test"] = data.random_split(TsFigDataset(files), (0.8, 0.1, 0.1), generator=torch.Generator().manual_seed(self.seed))
+                    self.dataset["train"] = TsFigDataset(self.train_files)
+                    self.dataset["validate"] = TsFigDataset(self.val_files, aug_num=1)
+            case "test":
+                self.dataset["test"] = TsFigDataset(self.test_files, aug_num=1)
             case "predict":
-                files = []
-                for d in iglob(path.join(self.vid_dir, "camera*")):
-                    if self.exclude is None or self.exclude["camera"] is None or path.basename(d)[6:] not in self.exclude["camera"]:
-                        for f in iglob(path.join(d, "video_??-??-??_??.mkv")):
-                            if self.exclude is None or self.exclude["index"] is None or int(f[-6:-4]) not in self.exclude["index"]:
-                                files.append(f)
-                self.dataset["predict"] = VidDataset(sorted(files))
+                self.dataset["predict"] = VidDataset(self.predict_files)
 
     def train_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["train"], batch_size=512, shuffle=True, num_workers=4)
+        return data.DataLoader(self.dataset["train"], batch_size=1024, shuffle=True, num_workers=4)
 
     def val_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["validate"], batch_size=512, num_workers=4)
+        return data.DataLoader(self.dataset["validate"], batch_size=1024, num_workers=4)
 
     def test_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["test"], batch_size=512, num_workers=4)
+        return data.DataLoader(self.dataset["test"], batch_size=1024, num_workers=4)
 
     def predict_dataloader(self) -> data.DataLoader:
         return data.DataLoader(self.dataset["predict"], batch_size=6, num_workers=4)

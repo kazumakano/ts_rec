@@ -9,14 +9,14 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import script.utility as util
 from script.data import VidDataset
-from script.model import CNN
+from script.model import CNN, CNNDeep
 
 
 def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    model = CNN.load_from_checkpoint(ckpt_file, param=util.load_param(param_file))
+    model = CNNDeep.load_from_checkpoint(ckpt_file, param=util.load_param(param_file), ce_loss_weight=torch.empty(10, dtype=torch.float32))
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[gpu_id],
@@ -32,7 +32,8 @@ def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file:
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     files.append(f)
 
-            trainer.predict(model=model, dataloaders=DataLoader(VidDataset(files, show_progress=False), batch_size=6, num_workers=4))
+            if len(files) > 0:
+                trainer.predict(model=model, dataloaders=DataLoader(VidDataset(files, show_progress=False), batch_size=6, num_workers=4))
 
 if __name__ == "__main__":
     import argparse
