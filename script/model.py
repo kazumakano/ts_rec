@@ -10,7 +10,7 @@ from . import utility as util
 
 
 class _BaseModule(pl.LightningModule):
-    def __init__(self, param: dict[str, util.Param], loss_weight: torch.Tensor | None) -> None:
+    def __init__(self, loss_weight: torch.Tensor | None) -> None:
         super().__init__()
 
         self.criterion = nn.CrossEntropyLoss(weight=loss_weight)    # BCEとの違いを調べる
