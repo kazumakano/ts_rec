@@ -16,7 +16,9 @@ def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file:
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    model = CNNDeep.load_from_checkpoint(ckpt_file, param=util.load_param(param_file), ce_loss_weight=torch.empty(10, dtype=torch.float32))
+    param = util.load_param(param_file)
+
+    model = CNNDeep.load_from_checkpoint(ckpt_file, param=param, ce_loss_weight=torch.empty(10, dtype=torch.float32))
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[gpu_id],
@@ -33,7 +35,7 @@ def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file:
                     files.append(f)
 
             if len(files) > 0:
-                trainer.predict(model=model, dataloaders=DataLoader(VidDataset(files, show_progress=False), batch_size=6, num_workers=4))
+                trainer.predict(model=model, dataloaders=DataLoader(VidDataset(files, show_progress=False), batch_size=6, num_workers=param["num_workers"]))
 
 if __name__ == "__main__":
     import argparse

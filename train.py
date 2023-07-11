@@ -15,7 +15,7 @@ def train(gpu_id: int, param_file: str, ts_fig_dir: str, ckpt_file: Optional[str
 
     param = util.load_param(param_file)
 
-    datamodule = DataModule(ts_fig_dir)
+    datamodule = DataModule(param, ts_fig_dir)
     trainer = pl.Trainer(
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
         callbacks=ModelCheckpoint(monitor="validation_loss", save_last=True),

@@ -60,10 +60,11 @@ class VidDataset(data.Dataset):
         return 6 * len(self.label)
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, ts_fig_dir: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
+    def __init__(self, param: dict[str | util.Param], ts_fig_dir: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
         super().__init__()
 
         self.dataset = {}
+        self.save_hyperparameters(param)
 
         if ts_fig_dir is not None:
             files = []
@@ -85,20 +86,20 @@ class DataModule(pl.LightningDataModule):
             case "fit":
                 if "train" not in self.dataset.keys():
                     self.dataset["train"] = TsFigDataset(self.train_files)
-                    self.dataset["validate"] = TsFigDataset(self.val_files, aug_num=1)
+                    self.dataset["validate"] = TsFigDataset(self.val_files, 1)
             case "test":
-                self.dataset["test"] = TsFigDataset(self.test_files, aug_num=1)
+                self.dataset["test"] = TsFigDataset(self.test_files, 1)
             case "predict":
                 self.dataset["predict"] = VidDataset(self.predict_files)
 
     def train_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["train"], batch_size=1024, shuffle=True, num_workers=4)
+        return data.DataLoader(self.dataset["train"], batch_size=self.hparams["batch_size"], shuffle=self.hparams["shuffle"], num_workers=self.hparams["num_workers"])
 
     def val_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["validate"], batch_size=1024, num_workers=4)
+        return data.DataLoader(self.dataset["validate"], batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
     def test_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["test"], batch_size=1024, num_workers=4)
+        return data.DataLoader(self.dataset["test"], batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
     def predict_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["predict"], batch_size=6, num_workers=4)
+        return data.DataLoader(self.dataset["predict"], batch_size=6, num_workers=self.hparams["num_workers"])

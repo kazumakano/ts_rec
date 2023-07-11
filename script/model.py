@@ -16,7 +16,7 @@ class _BaseModule(pl.LightningModule):
         self.criterion = nn.CrossEntropyLoss(weight=loss_weight)    # BCEとの違いを調べる
 
     def configure_optimizers(self) -> optim.SGD:
-        return optim.SGD(self.parameters(), lr=0.1)
+        return optim.SGD(self.parameters(), lr=self.hparams["learning_rate"])
 
     def training_step(self, batch: torch.Tensor) -> torch.Tensor:
         estim = self(batch[0])
@@ -124,6 +124,10 @@ class CNNDeep(_BaseModule):
         output = self.fc(hidden.flatten(start_dim=1))
 
         return output
+
+    @staticmethod
+    def is_valid_ks(param: dict[str | util.Param]) -> bool:
+        return param["conv_ks_1"] + param["conv_ks_2"] + param["conv_ks_3"] < 20
 
 class FullNet(_BaseModule):
     def __init__(self) -> None:

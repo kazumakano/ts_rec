@@ -5,7 +5,11 @@ opencv-python
 Pillow
 pytorch-lightning
 PyYAML
+ray[air]
+ray[default]
+ray[tune]
 scipy
+slack-bolt
 streamlit
 tensorboard
 torch
