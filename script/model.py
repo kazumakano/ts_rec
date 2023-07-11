@@ -13,7 +13,7 @@ class _BaseModule(pl.LightningModule):
     def __init__(self, loss_weight: torch.Tensor | None) -> None:
         super().__init__()
 
-        self.criterion = nn.CrossEntropyLoss(weight=loss_weight)    # BCEとの違いを調べる
+        self.criterion = nn.CrossEntropyLoss(weight=loss_weight)
 
     def configure_optimizers(self) -> optim.SGD:
         return optim.SGD(self.parameters(), lr=self.hparams["learning_rate"])
@@ -83,7 +83,7 @@ class _BaseModule(pl.LightningModule):
                 ), f)
         util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.logger.log_dir)
 
-class CNN(_BaseModule):
+class CNN2(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight)
 
@@ -100,24 +100,18 @@ class CNN(_BaseModule):
 
         return output
 
-class CNNDeep(_BaseModule):
+class CNN3(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight)
 
         self.save_hyperparameters(param)
 
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], param["conv_ks_1"])
-        self.bn_1 = nn.BatchNorm2d(param["conv_ch_1"])
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], param["conv_ks_2"])
-        self.bn_2 = nn.BatchNorm2d(param["conv_ch_2"])
         self.conv_3 = nn.Conv2d(param["conv_ch_2"], param["conv_ch_3"], param["conv_ks_3"])
-        self.bn_3 = nn.BatchNorm2d(param["conv_ch_3"])
         self.fc = nn.Linear((25 - param["conv_ks_1"] - param["conv_ks_2"] - param["conv_ks_3"]) * (20 - param["conv_ks_1"] - param["conv_ks_2"] - param["conv_ks_3"]) * param["conv_ch_3"], 10)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
-        # hidden = F.relu(self.bn_1(self.conv_1(input)))
-        # hidden = F.relu(self.bn_2(self.conv_2(hidden)))
-        # hidden = F.relu(self.bn_3(self.conv_3(hidden)))
         hidden = F.dropout(F.relu(self.conv_1(input)), training=self.training)
         hidden = F.dropout(F.relu(self.conv_2(hidden)), training=self.training)
         hidden = F.dropout(F.relu(self.conv_3(hidden)), training=self.training)
@@ -130,8 +124,8 @@ class CNNDeep(_BaseModule):
         return param["conv_ks_1"] + param["conv_ks_2"] + param["conv_ks_3"] < 20
 
 class FullNet(_BaseModule):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, loss_weight: Optional[torch.Tensor] = None) -> None:
+        super().__init__(loss_weight)
 
         self.layer1 = nn.Sequential(
             nn.Linear(1122, 512),

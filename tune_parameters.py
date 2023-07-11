@@ -11,7 +11,7 @@ from ray import air, tune
 from ray.tune import utils as tune_utils
 from script.data import DataModule
 import script.utility as util
-from script.model import CNN, CNNDeep
+from script.model import CNN3
 from script.callback import BestValLossReporter, SlackBot
 
 GPU_PER_TRIAL = 1
@@ -26,7 +26,7 @@ def _get_grid_param_space(param_list: dict[str, list[util.Param]]) -> dict[str, 
     return param_space
 
 def _try(datamodule: DataModule, param: dict) -> None:    ######
-    if CNNDeep.is_valid_ks(param):
+    if CNN3.is_valid_ks(param):
         torch.set_float32_matmul_precision("high")
         # tune_utils.wait_for_gpu()
 
@@ -40,7 +40,7 @@ def _try(datamodule: DataModule, param: dict) -> None:    ######
             enable_model_summary=False
         )
 
-        trainer.fit(CNNDeep(param, torch.Tensor([len(datamodule.dataset["train"]) / v for v in datamodule.dataset["train"].breakdown.values()])), datamodule=datamodule)
+        trainer.fit(CNN3(param, torch.Tensor([len(datamodule.dataset["train"]) / v for v in datamodule.dataset["train"].breakdown.values()])), datamodule=datamodule)
 
 def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in VISIBLE_GPU])

@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 import script.utility as util
 from script.data import DataModule
-from script.model import CNN, CNNDeep
+from script.model import CNN3
 
 
 def train(gpu_id: int, param_file: str, ts_fig_dir: str, ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
@@ -26,11 +26,11 @@ def train(gpu_id: int, param_file: str, ts_fig_dir: str, ckpt_file: Optional[str
 
     if ckpt_file is None:
         datamodule.setup("fit")
-        model = CNNDeep(param, torch.Tensor([len(datamodule.dataset["train"]) / v for v in datamodule.dataset["train"].breakdown.values()]))
+        model = CNN3(param, torch.Tensor([len(datamodule.dataset["train"]) / v for v in datamodule.dataset["train"].breakdown.values()]))
         trainer.fit(model, datamodule=datamodule)
         model.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0], loss_weight=torch.empty(10, dtype=torch.float32))
     else:
-        model = CNNDeep.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
+        model = CNN3.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
 
     trainer.test(model=model, datamodule=datamodule)
 

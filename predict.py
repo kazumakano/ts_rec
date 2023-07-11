@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import script.utility as util
 from script.data import VidDataset
-from script.model import CNN, CNNDeep
+from script.model import CNN3
 
 
 def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
@@ -18,7 +18,7 @@ def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file:
 
     param = util.load_param(param_file)
 
-    model = CNNDeep.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
+    model = CNN3.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[gpu_id],
