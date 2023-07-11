@@ -3,7 +3,6 @@ import os.path as path
 import pickle
 from typing import Optional
 import pytorch_lightning as pl
-import ray
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -15,7 +14,7 @@ from script.model import CNN3
 from script.callback import BestValLossReporter, SlackBot
 
 GPU_PER_TRIAL = 1
-MAX_PEND_TRIAL_NUM = 1
+MAX_PEND_TRIAL_NUM = 3
 VISIBLE_GPU = (1, 2, 3, )
 
 def _get_grid_param_space(param_list: dict[str, list[util.Param]]) -> dict[str, dict[str, list[util.Param]]]:
@@ -26,10 +25,10 @@ def _get_grid_param_space(param_list: dict[str, list[util.Param]]) -> dict[str, 
     return param_space
 
 def _try(datamodule: DataModule, param: dict) -> None:    ######
-    if CNN3.is_valid_ks(param):
-        torch.set_float32_matmul_precision("high")
-        # tune_utils.wait_for_gpu()
+    torch.set_float32_matmul_precision("high")
+    # tune_utils.wait_for_gpu()
 
+    if CNN3.is_valid_ks(param):
         trainer = pl.Trainer(
             logger=TensorBoardLogger(path.join(tune.get_trial_dir(), "log/"), name=None, default_hp_metric=False),
             callbacks=[BestValLossReporter(), ModelCheckpoint(monitor="validation_loss", save_last=True)],
