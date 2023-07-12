@@ -81,7 +81,7 @@ class _BaseModule(pl.LightningModule):
                     estim,
                     self.trainer.predict_dataloaders.dataset.label
                 ), f)
-        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.logger.log_dir)
+        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.trainer.predict_dataloaders.dataset.frm_num, self.logger.log_dir)
 
 class CNN2(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:

@@ -143,6 +143,23 @@ def random_split(files: list[str], prop: tuple[float, float, float], seed: int =
     return train_files, val_files, test_files
 
 def read_head_n_frms(file: str, n: int) -> np.ndarray:
+    """
+    Read first n frames.
+
+    Parameters
+    ----------
+    file : str
+        Path to video file.
+    n : int
+        Number of frames to read.
+
+    Returns
+    -------
+    frms : ndarray[uint8]
+        Frame images.
+        Shape is (n, height, width, channel).
+    """
+
     cap = cv2.VideoCapture(filename=file)
     frms = []
     for _ in range(n):
@@ -160,11 +177,11 @@ def unpack_param_list(param_list: dict[str, list[Param]]) -> dict[str, Param]:
 
     return param
 
-def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, result_dir: str) -> None:
+def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
     with open(path.join(result_dir, "predict_results.csv"), mode="a") as f:
         writer = csv.writer(f)
 
         if f.tell() == 0:
-            writer.writerow(("cam", "idx", "recog", "diff_in_sec"))
-        for i in range(len(cam_name)):
-            writer.writerow((cam_name[i], vid_idx[i], str(ts[i]), ts[i].total_seconds() - label[i].total_seconds()))
+            writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
+        for i in range(len(ts)):
+            writer.writerow((cam_name[i // frm_num], vid_idx[i // frm_num], i % frm_num, str(ts[i]), ts[i].total_seconds() - label[i // frm_num].total_seconds()))

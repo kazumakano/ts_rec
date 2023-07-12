@@ -39,25 +39,28 @@ class TsFigDataset(data.Dataset):
         return breakdown
 
 class VidDataset(data.Dataset):
-    def __init__(self, files: list[str], norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
+    def __init__(self, files: list[str], frm_num: int = 5, norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
+        self.frm_num = frm_num
+
         self.cam_name = np.empty(len(files), dtype="<U3")
         self.vid_idx = np.empty(len(files), dtype=np.int32)
-        self.img = torch.empty((len(files), 6, 3, 22, 17), dtype=torch.float32)
+        self.img = torch.empty((self.frm_num * len(files), 6, 3, 22, 17), dtype=torch.float32)
         self.label = np.empty(len(files), dtype=timedelta)
         for i, f in enumerate(tqdm(files, desc="loading videos", disable=not show_progress)):
             self.cam_name[i] = path.basename(path.dirname(f))[6:]
             self.vid_idx[i] = int(f[-6:-4])
-            for j, tmp_img in enumerate(util.extract_ts_fig(util.read_head_n_frms(f, 1).squeeze())):
-                self.img[i, j] = TF.to_tensor(tmp_img)
-            if norm:
-                self.img[i] = TF.normalize(self.img[i], (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            for j, frm in enumerate(util.read_head_n_frms(f, self.frm_num)):
+                for k, tmp_img in enumerate(util.extract_ts_fig(frm)):
+                    self.img[self.frm_num * i + j, k] = TF.to_tensor(tmp_img)
+                if norm:
+                    self.img[self.frm_num * i + j] = TF.normalize(self.img[self.frm_num * i + j], (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             self.label[i] = util.calc_ts_from_name(f, sec_per_file)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         return self.img[idx // 6, idx % 6]
 
     def __len__(self) -> int:
-        return 6 * len(self.label)
+        return 6 * len(self.img)
 
 class DataModule(pl.LightningDataModule):
     def __init__(self, param: dict[str | util.Param], ts_fig_dir: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
