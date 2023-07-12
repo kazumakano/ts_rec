@@ -67,6 +67,9 @@ def _write_img_desc(file: str) -> None:
     st.write(f"showing {digit_str} figure on {file}")
 
 def render() -> None:
+    if len(st.session_state) == 0:
+        _reset_states()
+
     st.title("Dataset Creator")
 
     usr_name = st.text_input("input your name")
@@ -99,6 +102,4 @@ def render() -> None:
                 st.button("skip", on_click=_next_states)
 
 if __name__ == "__main__":
-    if len(st.session_state) == 0:
-        _reset_states()
     render()
