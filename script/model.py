@@ -106,6 +106,7 @@ class CNN3(_BaseModule):
 
         self.save_hyperparameters(param)
 
+        self.bn_1, self.bn_2, self.bn_3 = nn.BatchNorm2d(param["conv_ch_1"]), nn.BatchNorm2d(param["conv_ch_2"]), nn.BatchNorm2d(param["conv_ch_3"])
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], param["conv_ks_1"])
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], param["conv_ks_2"])
         self.conv_3 = nn.Conv2d(param["conv_ch_2"], param["conv_ch_3"], param["conv_ks_3"])
