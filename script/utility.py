@@ -119,7 +119,7 @@ def get_result_dir(dir_name: str | None) -> str:
 
     return path.join(path.dirname(__file__), "../result/", dir_name)
 
-def load_param(file: str) -> dict[str, int | list[int] | list[str]]:
+def load_param(file: str) -> dict[str, Param | list[Param] | list[str]]:
     with open(file) as f:
         return yaml.safe_load(f)
 

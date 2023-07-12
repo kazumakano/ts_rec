@@ -31,15 +31,15 @@ class TsFigDataset(data.Dataset):
         return len(self.img)
 
     @property
-    def breakdown(self) -> dict[int, int]:
-        breakdown = {}
-        for k in np.unique(self.label):
-            breakdown[k] = len(self.label[self.label == k])
+    def breakdown(self) -> np.ndarray:
+        breakdown = np.empty(10, dtype=np.int32)
+        for i in range(10):
+            breakdown[i] = len(self.label[self.label == i])
 
         return breakdown
 
 class VidDataset(data.Dataset):
-    def __init__(self, files: list[str], norm: bool = False, show_progress: bool = True) -> None:
+    def __init__(self, files: list[str], norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
         self.cam_name = np.empty(len(files), dtype="<U3")
         self.vid_idx = np.empty(len(files), dtype=np.int32)
         self.img = torch.empty((len(files), 6, 3, 22, 17), dtype=torch.float32)
@@ -51,7 +51,7 @@ class VidDataset(data.Dataset):
                 self.img[i, j] = TF.to_tensor(tmp_img)
             if norm:
                 self.img[i] = TF.normalize(self.img[i], (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            self.label[i] = util.calc_ts_from_name(f, 1791)
+            self.label[i] = util.calc_ts_from_name(f, sec_per_file)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         return self.img[idx // 6, idx % 6]
@@ -63,7 +63,7 @@ class DataModule(pl.LightningDataModule):
     def __init__(self, param: dict[str | util.Param], ts_fig_dir: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
         super().__init__()
 
-        self.dataset = {}
+        self.dataset: dict[str, TsFigDataset | VidDataset] = {}
         self.save_hyperparameters(param)
 
         if ts_fig_dir is not None:

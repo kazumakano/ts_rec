@@ -39,7 +39,7 @@ def _try(datamodule: DataModule, param: dict) -> None:    ######
             enable_model_summary=False
         )
 
-        trainer.fit(CNN3(param, torch.Tensor([len(datamodule.dataset["train"]) / v for v in datamodule.dataset["train"].breakdown.values()])), datamodule=datamodule)
+        trainer.fit(CNN3(param, torch.from_numpy(len(datamodule.dataset["train"].label) / datamodule.dataset["train"].breakdown)), datamodule=datamodule)
 
 def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in VISIBLE_GPU])

@@ -26,7 +26,7 @@ def train(gpu_id: int, param_file: str, ts_fig_dir: str, ckpt_file: Optional[str
 
     if ckpt_file is None:
         datamodule.setup("fit")
-        model = CNN3(param, torch.Tensor([len(datamodule.dataset["train"]) / v for v in datamodule.dataset["train"].breakdown.values()]))
+        model = CNN3(param, torch.from_numpy(len(datamodule.dataset["train"].label) / datamodule.dataset["train"].breakdown))
         trainer.fit(model, datamodule=datamodule)
         model.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0], loss_weight=torch.empty(10, dtype=torch.float32))
     else:
