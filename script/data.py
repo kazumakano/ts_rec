@@ -110,9 +110,8 @@ class DataModule(pl.LightningDataModule):
 
     @classmethod
     def load(cls, dir: str) -> Self:
-        dataset, param = torch.load(path.join(dir, "data.pt"))
-        self = cls(param)
-        self.dataset = dataset
+        self = cls.__new__(cls)
+        self.dataset, self.hparams = torch.load(path.join(dir, "data.pt"))
 
         return self
 
