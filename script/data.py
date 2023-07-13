@@ -1,7 +1,7 @@
 import os.path as path
 from datetime import timedelta
 from glob import glob, iglob
-from typing import Optional
+from typing import Optional, Self
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -106,3 +106,14 @@ class DataModule(pl.LightningDataModule):
 
     def predict_dataloader(self) -> data.DataLoader:
         return data.DataLoader(self.dataset["predict"], batch_size=6, num_workers=self.hparams["num_workers"])
+
+    @classmethod
+    def load(cls, dir: str) -> Self:
+        dataset, param = torch.load(path.join(dir, "data.pt"))
+        self = cls(param)
+        self.dataset = dataset
+
+        return self
+
+    def save(self, dir: str) -> None:
+        torch.save((self.dataset, self.hparams), path.join(dir, "data.pt"))

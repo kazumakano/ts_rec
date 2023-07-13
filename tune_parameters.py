@@ -24,11 +24,12 @@ def _get_grid_param_space(param_list: dict[str, list[util.Param]]) -> dict[str, 
 
     return param_space
 
-def _try(datamodule: DataModule, param: dict) -> None:    ######
+def _try(param: dict[str, util.Param]) -> None:
     torch.set_float32_matmul_precision("high")
     # tune_utils.wait_for_gpu()
 
     if CNN3.is_valid_ks(param):
+        datamodule = DataModule.load(path.join(tune.get_trial_dir(), "../"))
         trainer = pl.Trainer(
             logger=TensorBoardLogger(path.join(tune.get_trial_dir(), "log/"), name=None, default_hp_metric=False),
             callbacks=[BestValLossReporter(), ModelCheckpoint(monitor="validation_loss", save_last=True)],
@@ -50,11 +51,13 @@ def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Opti
 
     datamodule = DataModule(util.unpack_param_list(param_list), ts_fig_dir)
     datamodule.setup("fit")
+    datamodule.save(result_dir)
+
     tuner = tune.Tuner(
-        trainable=tune.with_resources(lambda param: _try(datamodule, param), {"gpu": GPU_PER_TRIAL}),
+        trainable=tune.with_resources(_try, {"gpu": GPU_PER_TRIAL}),
         param_space=_get_grid_param_space(param_list),
         tune_config=tune.TuneConfig(mode="min", metric="best_validation_loss", chdir_to_trial_dir=False),
-        run_config=air.RunConfig(name=path.basename(result_dir), local_dir=path.dirname(result_dir), callbacks=None if bot_conf_file is None else [SlackBot(bot_conf_file)])
+        run_config=air.RunConfig(name=path.basename(result_dir), storage_path=path.dirname(result_dir), callbacks=None if bot_conf_file is None else [SlackBot(bot_conf_file)])
     )
 
     results = tuner.fit()
