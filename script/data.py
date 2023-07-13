@@ -1,6 +1,7 @@
 import os.path as path
 from datetime import timedelta
 from glob import glob, iglob
+from os import mkdir
 from typing import Optional, Self
 import numpy as np
 import pytorch_lightning as pl
@@ -116,4 +117,7 @@ class DataModule(pl.LightningDataModule):
         return self
 
     def save(self, dir: str) -> None:
+        if not path.exists(dir):
+            mkdir(dir)
+
         torch.save((self.dataset, self.hparams), path.join(dir, "data.pt"))
