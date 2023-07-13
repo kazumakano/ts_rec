@@ -110,8 +110,9 @@ class DataModule(pl.LightningDataModule):
 
     @classmethod
     def load(cls, dir: str) -> Self:
-        self = cls.__new__(cls)
-        self.dataset, self.hparams = torch.load(path.join(dir, "data.pt"))
+        dataset, param = torch.load(path.join(dir, "data.pt"))
+        self = cls(param)
+        self.dataset = dataset
 
         return self
 
@@ -120,3 +121,11 @@ class DataModule(pl.LightningDataModule):
             mkdir(dir)
 
         torch.save((self.dataset, self.hparams), path.join(dir, "data.pt"))
+
+    @staticmethod
+    def unpack_param_list(param_list: dict[str, list[util.Param]]) -> dict[str, util.Param]:
+        return {
+            "batch_size": param_list["batch_size"][0],
+            "num_workers": param_list["num_workers"][0],
+            "shuffle": param_list["shuffle"][0]
+        }

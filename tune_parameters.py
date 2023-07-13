@@ -49,7 +49,7 @@ def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Opti
     param_list = util.load_param(param_list_file)
     result_dir = util.get_result_dir(result_dir_name)
 
-    datamodule = DataModule(util.unpack_param_list(param_list), ts_fig_dir)
+    datamodule = DataModule(DataModule.unpack_param_list(param_list), ts_fig_dir)
     datamodule.setup("fit")
     datamodule.save(result_dir)
 

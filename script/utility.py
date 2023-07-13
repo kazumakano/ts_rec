@@ -170,13 +170,6 @@ def read_head_n_frms(file: str, n: int) -> np.ndarray:
 
     return np.stack(frms)
 
-def unpack_param_list(param_list: dict[str, list[Param]]) -> dict[str, Param]:
-    param = {}
-    for k, v in param_list.items():
-        param[k] = v[0]
-
-    return param
-
 def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
     with open(path.join(result_dir, "predict_results.csv"), mode="a") as f:
         writer = csv.writer(f)
