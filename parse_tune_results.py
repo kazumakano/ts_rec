@@ -38,7 +38,7 @@ def parse_tune_results(result_dir: str, export_errs: bool = False, export_loss: 
         print("exported to loss.csv and loss.png")
 
     errs = []
-    for trial_dir in iglob(path.join(result_dir, "lambda_*")):
+    for trial_dir in iglob(path.join(result_dir, "_try_*")):
         if "error.pkl" in listdir(trial_dir):
             with open(path.join(trial_dir, "error.pkl"), mode="rb") as f:
                 cause = pickle.load(f).cause
