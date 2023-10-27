@@ -14,8 +14,8 @@ from script.model import CNN3
 from script.callback import BestValLossReporter, SlackBot
 
 GPU_PER_TRIAL = 1
-MAX_PEND_TRIAL_NUM = 3
-VISIBLE_GPU = (1, 2, 3, )
+MAX_PEND_TRIAL_NUM = 1
+VISIBLE_GPU = (0, 1, 2, 3, 4, 5, 6, 7)
 
 def _get_grid_param_space(param_list: dict[str, list[util.Param]]) -> dict[str, dict[str, list[util.Param]]]:
     param_space = {}
