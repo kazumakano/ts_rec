@@ -31,7 +31,7 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
     for d in tqdm(sorted(iglob(path.join(vid_dir, "camera*"))), desc="recognizing"):
         if exclude is None or exclude["camera"] is None or path.basename(d)[6:] not in exclude["camera"]:
             files = []
-            for f in sorted(iglob(path.join(d, "video_??-??-??_??.mkv"))):
+            for f in sorted(iglob(path.join(d, "video_??-??-??_*.mkv"))):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     files.append(f)
 

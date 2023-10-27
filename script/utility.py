@@ -48,7 +48,7 @@ def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float,
 
     return auged_imgs
 
-def calc_ts_from_name(file: str, sec_per_file: float) -> timedelta:
+def calc_ts_from_name(file_name: str, sec_per_file: float) -> timedelta:
     """
     Roughly calculate timestamp based on video file name.
 
@@ -65,7 +65,7 @@ def calc_ts_from_name(file: str, sec_per_file: float) -> timedelta:
         Timestamp at the start of video.
     """
 
-    return timedelta(seconds=int(file[-9:-7]) + sec_per_file * int(file[-6:-4]), minutes=int(file[-12:-10]), hours=int(file[-15:-13]))
+    return timedelta(seconds=int(file_name[12:14]) + sec_per_file * int(file_name[15:-4]), minutes=int(file_name[9:11]), hours=int(file_name[6:8]))
 
 def extract_ts_fig(frm: np.ndarray) -> np.ndarray:
     """
@@ -177,4 +177,4 @@ def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarr
         if f.tell() == 0:
             writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
         for i in range(len(ts)):
-            writer.writerow((cam_name[i // frm_num], vid_idx[i // frm_num], i % frm_num, str(ts[i]), ts[i].total_seconds() - label[i // frm_num].total_seconds()))
+            writer.writerow((cam_name[i // frm_num], vid_idx[i // frm_num], i % frm_num, str(ts[i]), (ts[i].total_seconds() - label[i // frm_num].total_seconds() + 43200) % 86400 - 43200))
