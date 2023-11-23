@@ -142,3 +142,14 @@ class FullNet(_BaseModule):
         output = self.layer1(input.flatten(start_dim=1))
 
         return output
+
+class CNN34ManyFrms(CNN3):
+    def predict_step(self, batch: torch.Tensor, _: int) -> torch.Tensor:
+        estim = self(batch).reshape(-1, 6, 10)
+        self.predict_outputs.append(estim)
+
+        return estim
+
+    def on_predict_end(self) -> None:
+        estim = torch.vstack(self.predict_outputs).cpu().numpy()
+        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir)

@@ -1,6 +1,7 @@
 import csv
 import os.path as path
 from datetime import datetime, timedelta
+from typing import overload
 import cv2
 import numpy as np
 import torch
@@ -142,7 +143,7 @@ def random_split(files: list[str], prop: tuple[float, float, float], seed: int =
 
     return train_files, val_files, test_files
 
-def read_head_n_frms(file: str, n: int) -> np.ndarray:
+def read_head_n_frms(file: str, n: int, start_idx: int = 0) -> np.ndarray:
     """
     Read first n frames.
 
@@ -152,6 +153,8 @@ def read_head_n_frms(file: str, n: int) -> np.ndarray:
         Path to video file.
     n : int
         Number of frames to read.
+    start_idx : int, optional
+        Index of first frame to read.
 
     Returns
     -------
@@ -161,6 +164,7 @@ def read_head_n_frms(file: str, n: int) -> np.ndarray:
     """
 
     cap = cv2.VideoCapture(filename=file)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_idx)
     frms = []
     for _ in range(n):
         ret, frm = cap.read()
@@ -170,11 +174,23 @@ def read_head_n_frms(file: str, n: int) -> np.ndarray:
 
     return np.stack(frms)
 
+@overload
 def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
+    ...
+
+@overload
+def write_predict_result(cam_name: str, vid_idx: int, ts: np.ndarray, label: timedelta, start_frm_idx: int, result_dir: str) -> None:
+    ...
+
+def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, ts: np.ndarray, label: np.ndarray | timedelta, frm_num_or_start_idx: int, result_dir: str) -> None:
     with open(path.join(result_dir, "predict_results.csv"), mode="a") as f:
         writer = csv.writer(f)
 
         if f.tell() == 0:
             writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
-        for i in range(len(ts)):
-            writer.writerow((cam_name[i // frm_num], vid_idx[i // frm_num], i % frm_num, str(ts[i]), (ts[i].total_seconds() - label[i // frm_num].total_seconds() + 43200) % 86400 - 43200))
+        if isinstance(cam_name, str):
+            for i in range(len(ts)):
+                writer.writerow((cam_name, vid_idx, frm_num_or_start_idx + i, str(ts[i]), (ts[i].total_seconds() - label.total_seconds() + 43200) % 86400 - 43200))
+        else:
+            for i in range(len(ts)):
+                writer.writerow((cam_name[i // frm_num_or_start_idx], vid_idx[i // frm_num_or_start_idx], i % frm_num_or_start_idx, str(ts[i]), (ts[i].total_seconds() - label[i // frm_num_or_start_idx].total_seconds() + 43200) % 86400 - 43200))

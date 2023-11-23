@@ -64,6 +64,23 @@ class VidDataset(data.Dataset):
     def __len__(self) -> int:
         return 6 * len(self.img)
 
+class VidDataset4ManyFrms(VidDataset):
+    def __init__(self, file: str, max_frm_num: int = 1024, start_frm_idx: int = 0, norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
+        self.start_frm_idx = start_frm_idx
+
+        self.cam_name = path.basename(path.dirname(file))[6:]
+        file_name = path.basename(file)
+        self.vid_idx = int(file_name[15:-4])
+        self.label = util.calc_ts_from_name(file_name, sec_per_file)
+
+        frms = util.read_head_n_frms(file, max_frm_num, self.start_frm_idx)
+        self.img = torch.empty((len(frms), 6, 3, 22, 17), dtype=torch.float32)
+        for i, frm in enumerate(tqdm(frms, desc="loading video", disable=not show_progress)):
+            for j, tmp_img in enumerate(util.extract_ts_fig(frm)):
+                self.img[i, j] = TF.to_tensor(tmp_img)
+            if norm:
+                self.img[i] = TF.normalize(self.img[i], (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+
 class DataModule(pl.LightningDataModule):
     def __init__(self, param: dict[str | util.Param], ts_fig_dir: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, seed: int = 0) -> None:
         super().__init__()
