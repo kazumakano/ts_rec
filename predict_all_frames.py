@@ -63,17 +63,18 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
     result_dir = util.get_result_dir(result_dir_name)
 
     exclude = None if ex_file is None else util.load_param(ex_file)
-    processes = []
+    pid_queue = []
     for d in tqdm(sorted(iglob(path.join(vid_dir, "camera*"))), desc="recognizing"):
-        if exclude is None or exclude["camera"] is None or path.basename(d)[6:] not in exclude["camera"]:
-            for f in sorted(iglob(path.join(d, "video_??-??-??_*.mkv"))):
+        cam_name = path.basename(d)[6:]
+        if exclude is None or exclude["camera"] is None or cam_name not in exclude["camera"]:
+            for f in tqdm(sorted(iglob(path.join(d, "video_??-??-??_*.mkv"))), desc=f"recognizing for camera {cam_name}", position=1):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
-                    if len(processes) >= len(VISIBLE_GPU) // GPU_PER_TASK:
-                        finished_process_id = ray.wait(processes, num_returns=1)[0][0]
-                        processes.remove(finished_process_id)
-                    processes.append(_predict.remote(ckpt_file, param, path.join(result_dir, path.basename(d)[6:], path.splitext(path.basename(f))[0][6:]), f))
+                    if len(pid_queue) >= len(VISIBLE_GPU) // GPU_PER_TASK:
+                        finished_pid = ray.wait(pid_queue, num_returns=1)[0][0]
+                        pid_queue.remove(finished_pid)
+                    pid_queue.append(_predict.remote(ckpt_file, param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), f))
 
-    ray.get(processes)
+    ray.get(pid_queue)
 
 if __name__ == "__main__":
     import argparse
