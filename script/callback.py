@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 import torch
-from ray import tune
+from ray import train, tune
 from ray.tune.experiment import Trial
 from slack_bolt.app import App
 from . import utility as util
@@ -16,7 +16,7 @@ class BestValLossReporter(pl.Callback):
             self.best_val_loss = trainer.callback_metrics["validation_loss"].item()
 
     def on_fit_end(self, _: pl.Trainer, __: pl.LightningModule) -> None:
-        tune.report(best_validation_loss=self.best_val_loss)
+        train.report({"best_validation_loss": self.best_val_loss})
 
 class SlackBot(tune.Callback):
     def __init__(self, conf_file: str) -> None:
