@@ -100,6 +100,10 @@ class CNN2(_BaseModule):
 
         return output
 
+    @staticmethod
+    def is_valid_ks(param: dict[str | util.Param]) -> bool:
+        return param["conv_ks_1"] + param["conv_ks_2"] < 19
+
 class CNN3(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight)
@@ -152,4 +156,6 @@ class CNN34ManyFrms(CNN3):
 
     def on_predict_end(self) -> None:
         estim = torch.vstack(self.predict_outputs).cpu().numpy()
-        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir)
+        estim_ts, unreliable_frm_idxes = util.get_most_likely_ts_with_label(estim, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx != 0)
+        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim_ts, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir, unreliable_frm_idxes)
+        self.end_frm_ts = estim_ts[-1]
