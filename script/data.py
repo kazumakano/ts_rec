@@ -3,10 +3,10 @@ from datetime import timedelta
 from glob import glob, iglob
 from os import mkdir
 from typing import Optional, Self
+import cv2
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from PIL import Image
 from torch.utils import data
 from torchvision.transforms import functional as TF
 from tqdm import tqdm
@@ -20,7 +20,7 @@ class TsFigDataset(data.Dataset):
         self.img = torch.empty((self.aug_num * len(files), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(len(files), dtype=torch.int64)
         for i, f in enumerate(tqdm(files, desc="loading timestamp figure images")):
-            self.img[self.aug_num * i:self.aug_num * i + self.aug_num] = util.aug_img(TF.to_tensor(Image.open(f)), self.aug_num, brightness, contrast, hue, max_shift_len)
+            self.img[self.aug_num * i:self.aug_num * i + self.aug_num] = util.aug_img(TF.to_tensor(cv2.imread(f)), self.aug_num, brightness, contrast, hue, max_shift_len)
             self.label[i] = int(f[-5])
         if norm:
             self.img = TF.normalize(self.img, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -38,6 +38,9 @@ class TsFigDataset(data.Dataset):
             breakdown[i] = len(self.label[self.label == i])
 
         return breakdown
+
+    def calc_loss_weight(self) -> torch.Tensor:
+        return torch.from_numpy(1 / (1 / self.breakdown).sum() / self.breakdown).to(dtype=torch.float32)
 
 class VidDataset(data.Dataset):
     def __init__(self, files: list[str], frm_num: int = 5, norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
@@ -65,13 +68,13 @@ class VidDataset(data.Dataset):
         return 6 * len(self.img)
 
 class VidDataset4ManyFrms(VidDataset):
-    def __init__(self, file: str, max_frm_num: int = 1024, start_frm_idx: int = 0, norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
+    def __init__(self, file: str, label: Optional[timedelta] = None, max_frm_num: int = 1024, start_frm_idx: int = 0, norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
         self.start_frm_idx = start_frm_idx
 
         self.cam_name = path.basename(path.dirname(file))[6:]
         file_name = path.basename(file)
         self.vid_idx = int(file_name[15:-4])
-        self.label = util.calc_ts_from_name(file_name, sec_per_file)
+        self.label = util.calc_ts_from_name(file_name, sec_per_file) if label is None else label
 
         frms = util.read_head_n_frms(file, max_frm_num, self.start_frm_idx)
         self.img = torch.empty((len(frms), 6, 3, 22, 17), dtype=torch.float32)
@@ -99,7 +102,7 @@ class DataModule(pl.LightningDataModule):
             self.predict_files = []
             for d in sorted(iglob(path.join(vid_dir, "camera*"))):
                 if exclude is None or exclude["camera"] is None or path.basename(d)[6:] not in exclude["camera"]:
-                    for f in sorted(iglob(path.join(d, "video_??-??-??_??.mkv"))):
+                    for f in sorted(iglob(path.join(d, "video_??-??-??_*.mkv"))):
                         if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                             self.predict_files.append(f)
 
