@@ -1,7 +1,7 @@
 import csv
 import os.path as path
 from datetime import datetime, timedelta
-from typing import overload
+from typing import Optional, overload
 import cv2
 import numpy as np
 import torch
@@ -68,6 +68,31 @@ def calc_ts_from_name(file_name: str, sec_per_file: float) -> timedelta:
 
     return timedelta(seconds=int(file_name[12:14]) + sec_per_file * int(file_name[15:-4]), minutes=int(file_name[9:11]), hours=int(file_name[6:8]))
 
+def check_ts_consis(ts: np.ndarray, label_at_start_frm: Optional[timedelta] = None) -> list[int]:
+    """
+    Check consistency of sequential timestamps.
+
+    Parameters
+    ----------
+    ts : ndarray[timedelta]
+        Sequential timestamps.
+        Shape is (frame, ).
+    label_at_start_frm : timedelta, optional
+        Timestamp at start frame.
+
+    Returns
+    -------
+    frm_idxes : list[int]
+        Frame indexes when timestamps are inconsistent.
+    """
+
+    inconsis_frm_idxes = []
+    for i, t in enumerate(ts):
+        if (i == 0 and label_at_start_frm is not None and (t - label_at_start_frm).total_seconds() > 1) or (i > 0 and (t - ts[i - 1]).total_seconds()) > 1:
+            inconsis_frm_idxes.append(i)
+
+    return inconsis_frm_idxes
+
 def extract_ts_fig(frm: np.ndarray) -> np.ndarray:
     """
     Extract images of timestamp figures from video frame.
@@ -91,6 +116,101 @@ def extract_ts_fig(frm: np.ndarray) -> np.ndarray:
 
     return ts_fig_imgs
 
+def get_consis_ts(estim: np.ndarray, label_at_start_frm: timedelta, label_is_accurate: bool, max_reliable_order: int = 2) -> tuple[np.ndarray, list[int]]:
+    """
+    Decide timestamps based on sequential model outputs and last one, considering time consistency.
+
+    Parameters
+    ----------
+    estim : ndarray[float32]
+        Sequential model outputs.
+        Shape is (frame, 6, class).
+    label_at_start_frm : timedelta
+        Timestamp at start frame.
+    label_is_accurate : bool
+        Whether label at start frame is accurate.
+    max_reliable_order : int, optional
+        Maximum order of estimation probability to allow.
+        Must be 0 ~ 9.
+
+    Returns
+    -------
+    ts : ndarray[timedelta]
+        Likely timestamps.
+        Shape is (frame, ).
+    frm_idxes : list[int]
+        Frame indexes when timestamps are inconsistent.
+    """
+
+    likely_ts = np.empty(len(estim), dtype=timedelta)
+    inconsis_frm_idxes = []
+    for i, (h_1, h_2, m_1, m_2, s_1, s_2) in enumerate(softmax(-estim, axis=2).argsort(axis=2)):
+        if i == 0 and not label_is_accurate:
+            label_in_sec = round(label_at_start_frm.total_seconds())
+
+            if label_in_sec % 3600 >= 3540:    # label is ??:59:??
+                m_1_ordrer_if_same, m_2_order_if_same = np.where(m_1[m_1 < 6] == 5)[0][0], np.where(m_2 == 9)[0][0]
+                m_1_ordrer_if_next, m_2_order_if_next = np.where(m_1[m_1 < 6] == 0)[0][0], np.where(m_2 == 0)[0][0]
+                if m_1_ordrer_if_same + m_2_order_if_same < m_1_ordrer_if_next + m_2_order_if_next:
+                    likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=59, hours=label_in_sec // 3600)
+                else:
+                    likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=0, hours=label_in_sec // 3600 + 1)
+            elif label_in_sec % 600 >= 540:    # label is ??:[0-4]9:??
+                m_1_ordrer_if_same, m_2_order_if_same = np.where(m_1[m_1 < 6] == label_in_sec % 3600 // 600)[0][0], np.where(m_2 == 9)[0][0]
+                m_1_ordrer_if_next, m_2_order_if_next = np.where(m_1[m_1 < 6] == label_in_sec % 3600 // 600 + 1)[0][0], np.where(m_2 == 0)[0][0]
+                if m_1_ordrer_if_same + m_2_order_if_same < m_1_ordrer_if_next + m_2_order_if_next:
+                    likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=label_in_sec % 3600 // 60, hours=label_in_sec // 3600)
+                else:
+                    likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=label_in_sec % 3600 // 60 + 1, hours=label_in_sec // 3600)
+            else:                              # label is ??:?[0-8]:??
+                m_2_order = 0
+                while True:
+                    if m_2_order > max_reliable_order:
+                        likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=10 * round(m_1[m_1 < 6][0]) + round(m_2[0]), hours=10 * round(h_1[h_1 < 3][0]) + round(h_2[0]))
+                        inconsis_frm_idxes.append(0)
+                        break
+                    elif round(m_2[m_2_order]) - label_in_sec % 600 // 60 in (0, 1):
+                        likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=10 * (label_in_sec % 3600 // 600) + round(m_2[m_2_order]), hours=label_in_sec // 3600)
+                        break
+                    else:
+                        m_2_order += 1
+
+        else:
+            label = label_at_start_frm if i == 0 else likely_ts[i - 1]
+            label_in_sec = round(label.total_seconds())
+
+            if label_in_sec % 60 == 59:       # label is ??:??:59
+                s_1_order_if_same, s_2_order_if_same = np.where(s_1[s_1 < 6] == 5)[0][0], np.where(s_2 == 9)[0][0]
+                s_1_order_if_next, s_2_order_if_next = np.where(s_1[s_1 < 6] == 0)[0][0], np.where(s_2 == 0)[0][0]
+                if s_1_order_if_same + s_2_order_if_same < s_1_order_if_next + s_2_order_if_next:
+                    likely_ts[i] = label
+                else:
+                    likely_ts[i] = label + timedelta(seconds=1)
+            else:
+                if label_in_sec % 10 == 9:    # label is ??:??:[0-4]9
+                    s_1_order_if_same, s_2_order_if_same = np.where(s_1[s_1 < 6] == label_in_sec % 60 // 10)[0][0], np.where(s_2 == 9)[0][0]
+                    s_1_order_if_next, s_2_order_if_next = np.where(s_1[s_1 < 6] == label_in_sec % 60 // 10 + 1)[0][0], np.where(s_2 == 0)[0][0]
+                    if s_1_order_if_same + s_2_order_if_same < s_1_order_if_next + s_2_order_if_next:
+                        likely_ts[i] = label
+                    else:
+                        likely_ts[i] = label + timedelta(seconds=1)
+                else:                         # label is ??:??:?[0-8]
+                    s_2_order = 0
+                    while True:
+                        if s_2_order > max_reliable_order:
+                            likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=10 * round(m_1[m_1 < 6][0]) + round(m_2[0]), hours=10 * round(h_1[h_1 < 3][0]) + round(h_2[0]))
+                            inconsis_frm_idxes.append(i)
+                            break
+                        else:
+                            diff_in_sec = round(s_2[s_2_order]) - label_in_sec % 10
+                            if diff_in_sec in (0, 1):
+                                likely_ts[i] = label + timedelta(seconds=diff_in_sec)
+                                break
+                            else:
+                                s_2_order += 1
+
+    return likely_ts, inconsis_frm_idxes
+
 def get_most_likely_ts(estim: np.ndarray) -> np.ndarray:
     """
     Decide most likely timestamps based on model outputs, eliminating invalid timestamps.
@@ -113,101 +233,6 @@ def get_most_likely_ts(estim: np.ndarray) -> np.ndarray:
         most_likely_ts[i] = timedelta(seconds=10 * int(s_1[s_1 < 6][0]) + int(s_2[0]), minutes=10 * int(m_1[m_1 < 6][0]) + int(m_2[0]), hours=10 * int(h_1[h_1 < 3][0]) + int(h_2[0]))
 
     return most_likely_ts
-
-def get_most_likely_ts_with_label(estim: np.ndarray, label_at_start_frm: timedelta, label_is_accurate: bool, max_reliable_order: int = 2) -> tuple[np.ndarray, list[int]]:
-    """
-    Decide most likely timestamps based on model outputs, considering temporal consistency.
-
-    Parameters
-    ----------
-    estim : ndarray[float32]
-        Model outputs.
-        Shape is (frame, 6, class).
-    label_at_start_frm : timedelta
-        Timestamp at start frame.
-    label_is_accurate : bool
-        Whether label at start frame is accurate.
-    max_reliable_order : int, optional
-        Maximum order of estimation probability to allow.
-        Must be 0 ~ 9.
-
-    Returns
-    -------
-    ts : ndarray[timedelta]
-        Most likely timestamps.
-        Shape is (frame, ).
-    frm_idxes : list[int]
-        Frame indexes when timestamps are unreliable.
-    """
-
-    most_likely_ts = np.empty(len(estim), dtype=timedelta)
-    unreliable_frm_idxes = []
-    for i, (h_1, h_2, m_1, m_2, s_1, s_2) in enumerate(softmax(-estim, axis=2).argsort(axis=2)):
-        if i == 0 and not label_is_accurate:
-            label_in_sec = round(label_at_start_frm.total_seconds())
-
-            if label_in_sec % 3600 >= 3540:    # label is ??:59:??
-                m_1_ordrer_if_same, m_2_order_if_same = np.where(m_1[m_1 < 6] == 5)[0][0], np.where(m_2 == 9)[0][0]
-                m_1_ordrer_if_next, m_2_order_if_next = np.where(m_1[m_1 < 6] == 0)[0][0], np.where(m_2 == 0)[0][0]
-                if m_1_ordrer_if_same + m_2_order_if_same < m_1_ordrer_if_next + m_2_order_if_next:
-                    most_likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=59, hours=label_in_sec // 3600)
-                else:
-                    most_likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=0, hours=label_in_sec // 3600 + 1)
-            elif label_in_sec % 600 >= 540:    # label is ??:[0-4]9:??
-                m_1_ordrer_if_same, m_2_order_if_same = np.where(m_1[m_1 < 6] == label_in_sec % 3600 // 600)[0][0], np.where(m_2 == 9)[0][0]
-                m_1_ordrer_if_next, m_2_order_if_next = np.where(m_1[m_1 < 6] == label_in_sec % 3600 // 600 + 1)[0][0], np.where(m_2 == 0)[0][0]
-                if m_1_ordrer_if_same + m_2_order_if_same < m_1_ordrer_if_next + m_2_order_if_next:
-                    most_likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=label_in_sec % 3600 // 60, hours=label_in_sec // 3600)
-                else:
-                    most_likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=label_in_sec % 3600 // 60 + 1, hours=label_in_sec // 3600)
-            else:                              # label is ??:?[0-8]:??
-                m_2_order = 0
-                while True:
-                    if m_2_order > max_reliable_order:
-                        most_likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=10 * round(m_1[m_1 < 6][0]) + round(m_2[0]), hours=10 * round(h_1[h_1 < 3][0]) + round(h_2[0]))
-                        unreliable_frm_idxes.append(0)
-                        break
-                    elif round(m_2[m_2_order]) - label_in_sec % 600 // 60 in (0, 1):
-                        most_likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=10 * (label_in_sec % 3600 // 600) + round(m_2[m_2_order]), hours=label_in_sec // 3600)
-                        break
-                    else:
-                        m_2_order += 1
-
-        else:
-            label = label_at_start_frm if i == 0 else most_likely_ts[i - 1]
-            label_in_sec = round(label.total_seconds())
-
-            if label_in_sec % 60 == 59:       # label is ??:??:59
-                s_1_order_if_same, s_2_order_if_same = np.where(s_1[s_1 < 6] == 5)[0][0], np.where(s_2 == 9)[0][0]
-                s_1_order_if_next, s_2_order_if_next = np.where(s_1[s_1 < 6] == 0)[0][0], np.where(s_2 == 0)[0][0]
-                if s_1_order_if_same + s_2_order_if_same < s_1_order_if_next + s_2_order_if_next:
-                    most_likely_ts[i] = label
-                else:
-                    most_likely_ts[i] = label + timedelta(seconds=1)
-            else:
-                if label_in_sec % 10 == 9:    # label is ??:??:[0-4]9
-                    s_1_order_if_same, s_2_order_if_same = np.where(s_1[s_1 < 6] == label_in_sec % 60 // 10)[0][0], np.where(s_2 == 9)[0][0]
-                    s_1_order_if_next, s_2_order_if_next = np.where(s_1[s_1 < 6] == label_in_sec % 60 // 10 + 1)[0][0], np.where(s_2 == 0)[0][0]
-                    if s_1_order_if_same + s_2_order_if_same < s_1_order_if_next + s_2_order_if_next:
-                        most_likely_ts[i] = label
-                    else:
-                        most_likely_ts[i] = label + timedelta(seconds=1)
-                else:                         # label is ??:??:?[0-8]
-                    s_2_order = 0
-                    while True:
-                        if s_2_order > max_reliable_order:
-                            most_likely_ts[i] = timedelta(seconds=10 * round(s_1[s_1 < 6][0]) + round(s_2[0]), minutes=10 * round(m_1[m_1 < 6][0]) + round(m_2[0]), hours=10 * round(h_1[h_1 < 3][0]) + round(h_2[0]))
-                            unreliable_frm_idxes.append(i)
-                            break
-                        else:
-                            diff_in_sec = round(s_2[s_2_order]) - label_in_sec % 10
-                            if diff_in_sec in (0, 1):
-                                most_likely_ts[i] = label + timedelta(seconds=diff_in_sec)
-                                break
-                            else:
-                                s_2_order += 1
-
-    return most_likely_ts, unreliable_frm_idxes
 
 def get_result_dir(dir_name: str | None) -> str:
     if dir_name is None:
@@ -274,10 +299,10 @@ def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarr
     ...
 
 @overload
-def write_predict_result(cam_name: str, vid_idx: int, ts: np.ndarray, label_at_start_frm: timedelta, start_frm_idx: int, result_dir: str, unreliable_frm_idxes: list[int]) -> None:
+def write_predict_result(cam_name: str, vid_idx: int, ts: np.ndarray, label_at_start_frm: timedelta, start_frm_idx: int, result_dir: str, inconsis_frm_idxes: list[int]) -> None:
     ...
 
-def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, ts: np.ndarray, label: np.ndarray | timedelta, frm_num_or_start_frm_idx: int, result_dir: str, unreliable_frm_idxes: list[int] | None = None) -> None:
+def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, ts: np.ndarray, label: np.ndarray | timedelta, frm_num_or_start_frm_idx: int, result_dir: str, inconsis_frm_idxes: list[int] | None = None) -> None:
     with open(path.join(result_dir, "predict_results.csv"), mode="a") as f:
         writer = csv.writer(f)
 
@@ -285,7 +310,7 @@ def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, 
             writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
         if isinstance(cam_name, str):
             for i in range(len(ts)):
-                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, str(ts[i]), (ts[i].total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "unreliable" if i in unreliable_frm_idxes else ""))
+                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, str(ts[i]), (ts[i].total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "unreliable" if i in inconsis_frm_idxes else ""))
         else:
             for i in range(len(ts)):
                 writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, str(ts[i]), (ts[i].total_seconds() - label[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
