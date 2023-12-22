@@ -92,7 +92,7 @@ class _BaseModule4ManyFrms(_BaseModule):
 
     def on_predict_end(self) -> None:
         estim = torch.vstack(self.predict_outputs).cpu().numpy()
-        estim_ts, unreliable_frm_idxes = util.get_most_likely_ts_with_label(estim, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx != 0)
+        estim_ts, unreliable_frm_idxes = util.get_consis_ts(estim, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx != 0)
         util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim_ts, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir, unreliable_frm_idxes)
         self.ts_at_end_frm = estim_ts[-1]
 
@@ -144,7 +144,7 @@ class FullNet(_BaseModule):
     def __init__(self, loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight)
 
-        self.layer1 = nn.Sequential(
+        self.layers = nn.Sequential(
             nn.Linear(1122, 512),
             nn.ReLU(),
             nn.Dropout(p=0.2),
@@ -155,9 +155,36 @@ class FullNet(_BaseModule):
         )
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
-        output = self.layer1(input.flatten(start_dim=1))
+        output = self.layers(input.flatten(start_dim=1))
+
+        return output
+
+class VGG(_BaseModule):
+    def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
+        super().__init__(loss_weight)
+
+        self.save_hyperparameters(param)
+
+        self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], 3)
+        self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], 3)
+        self.conv_3 = nn.Conv2d(param["conv_ch_2"], param["conv_ch_3"], 3)
+        self.conv_4 = nn.Conv2d(param["conv_ch_3"], param["conv_ch_4"], 3)
+        self.conv_5 = nn.Conv2d(param["conv_ch_4"], param["conv_ch_5"], 3)
+        self.fc = nn.Linear(18 * param["conv_ch_5"], 10)
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
+        hidden = F.relu(self.conv_1(input))
+        hidden = F.relu(self.conv_2(hidden))
+        hidden = F.relu(self.conv_3(hidden))
+        hidden = F.relu(self.conv_4(hidden))
+        hidden = F.relu(self.conv_5(hidden))
+        hidden = F.dropout(F.max_pool2d(hidden, 2), training=self.training)
+        output = self.fc(hidden.flatten(start_dim=1))
 
         return output
 
 class CNN34ManyFrms(_BaseModule4ManyFrms, CNN3):
+    ...
+
+class VGG4ManyFrms(_BaseModule4ManyFrms, VGG):
     ...
