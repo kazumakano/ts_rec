@@ -14,9 +14,6 @@ from script.data import VidDataset4ManyFrms
 from script.model import CNN34ManyFrms
 
 """
-BATCH_SIZE : int
-    Batch size to input data into models.
-    Must be divisible by 6.
 GPU : float
     Total number of gpus.
 GPU_PER_TASK : float
@@ -26,7 +23,6 @@ MAX_FRM_NUM : int
     Consider to reduce this number if out of memory.
 """
 
-BATCH_SIZE = 6144
 GPU = 1
 GPU_PER_TASK = 0.2
 MAX_FRM_NUM = 1024
@@ -46,8 +42,8 @@ def _predict(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_
 
     dataset_idx = 0
     while True:
-        dataset = VidDataset4ManyFrms(vid_file, MAX_FRM_NUM, dataset_idx * MAX_FRM_NUM, show_progress=False)
-        trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=BATCH_SIZE, num_workers=param["num_workers"]))
+        dataset = VidDataset4ManyFrms(vid_file, None if dataset_idx == 0 else model.ts_at_end_frm, MAX_FRM_NUM, dataset_idx * MAX_FRM_NUM, show_progress=False)
+        trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=param["batch_size"], num_workers=param["num_workers"]))
         if len(dataset) < 6 * MAX_FRM_NUM:
             break
         dataset_idx += 1
@@ -68,7 +64,7 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
     for d in tqdm(sorted(iglob(path.join(vid_dir, "camera*"))), desc="recognizing"):
         cam_name = path.basename(d)[6:]
         if exclude is None or exclude["camera"] is None or cam_name not in exclude["camera"]:
-            for f in tqdm(sorted(iglob(path.join(d, "video_??-??-??_*.mkv"))), desc=f"camera {cam_name}"):
+            for f in tqdm(sorted(iglob(path.join(d, "video_??-??-??_*.mp4"))), desc=f"camera {cam_name}"):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     if len(pid_queue) >= GPU // GPU_PER_TASK:
                         finished_pid = ray.wait(pid_queue, num_returns=1)[0][0]
