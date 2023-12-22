@@ -94,7 +94,7 @@ class _BaseModule4ManyFrms(_BaseModule):
         estim = torch.vstack(self.predict_outputs).cpu().numpy()
         estim_ts, unreliable_frm_idxes = util.get_most_likely_ts_with_label(estim, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx != 0)
         util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim_ts, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir, unreliable_frm_idxes)
-        self.end_frm_ts = estim_ts[-1]
+        self.ts_at_end_frm = estim_ts[-1]
 
 class CNN2(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
