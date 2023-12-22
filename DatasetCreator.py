@@ -89,7 +89,7 @@ def render() -> None:
                 _write_img_desc(files[0])
 
                 img = util.extract_ts_fig(util.read_head_n_frms(files[0], 1).squeeze())[st.session_state["digit"]]
-                st.image(img, width=256)
+                st.image(img, width=256, channels="BGR")
 
                 for i, c in enumerate(st.columns(10)):
                     with c:
