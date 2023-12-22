@@ -83,6 +83,19 @@ class _BaseModule(pl.LightningModule):
                 ), f)
         util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.trainer.predict_dataloaders.dataset.frm_num, self.logger.log_dir)
 
+class _BaseModule4ManyFrms(_BaseModule):
+    def predict_step(self, batch: torch.Tensor, _: int) -> torch.Tensor:
+        estim = self(batch).reshape(-1, 6, 10)
+        self.predict_outputs.append(estim)
+
+        return estim
+
+    def on_predict_end(self) -> None:
+        estim = torch.vstack(self.predict_outputs).cpu().numpy()
+        estim_ts, unreliable_frm_idxes = util.get_most_likely_ts_with_label(estim, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx != 0)
+        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim_ts, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir, unreliable_frm_idxes)
+        self.end_frm_ts = estim_ts[-1]
+
 class CNN2(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight)
@@ -110,7 +123,6 @@ class CNN3(_BaseModule):
 
         self.save_hyperparameters(param)
 
-        self.bn_1, self.bn_2, self.bn_3 = nn.BatchNorm2d(param["conv_ch_1"]), nn.BatchNorm2d(param["conv_ch_2"]), nn.BatchNorm2d(param["conv_ch_3"])
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], param["conv_ks_1"])
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], param["conv_ks_2"])
         self.conv_3 = nn.Conv2d(param["conv_ch_2"], param["conv_ch_3"], param["conv_ks_3"])
@@ -147,15 +159,5 @@ class FullNet(_BaseModule):
 
         return output
 
-class CNN34ManyFrms(CNN3):
-    def predict_step(self, batch: torch.Tensor, _: int) -> torch.Tensor:
-        estim = self(batch).reshape(-1, 6, 10)
-        self.predict_outputs.append(estim)
-
-        return estim
-
-    def on_predict_end(self) -> None:
-        estim = torch.vstack(self.predict_outputs).cpu().numpy()
-        estim_ts, unreliable_frm_idxes = util.get_most_likely_ts_with_label(estim, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx != 0)
-        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim_ts, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir, unreliable_frm_idxes)
-        self.end_frm_ts = estim_ts[-1]
+class CNN34ManyFrms(_BaseModule4ManyFrms, CNN3):
+    ...
