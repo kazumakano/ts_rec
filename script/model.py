@@ -185,6 +185,3 @@ class VGG(_BaseModule):
 
 class CNN34ManyFrms(_BaseModule4ManyFrms, CNN3):
     ...
-
-class VGG4ManyFrms(_BaseModule4ManyFrms, VGG):
-    ...
