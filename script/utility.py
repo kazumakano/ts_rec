@@ -88,7 +88,7 @@ def check_ts_consis(ts: np.ndarray, label_at_start_frm: Optional[timedelta] = No
 
     inconsis_frm_idxes = []
     for i, t in enumerate(ts):
-        if (i == 0 and label_at_start_frm is not None and (t - label_at_start_frm).total_seconds() > 1) or (i > 0 and (t - ts[i - 1]).total_seconds()) > 1:
+        if (i == 0 and label_at_start_frm is not None and (t - label_at_start_frm).total_seconds() not in (0, 1)) or (i > 0 and (t - ts[i - 1]).total_seconds()) not in (0, 1):
             inconsis_frm_idxes.append(i)
 
     return inconsis_frm_idxes
