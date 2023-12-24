@@ -306,11 +306,13 @@ def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, 
     with open(path.join(result_dir, "predict_results.csv"), mode="a") as f:
         writer = csv.writer(f)
 
-        if f.tell() == 0:
-            writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
         if isinstance(cam_name, str):
+            if f.tell() == 0:
+                writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec", "is_inconsis"))
             for i in range(len(ts)):
-                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, str(ts[i]), (ts[i].total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "unreliable" if i in inconsis_frm_idxes else ""))
+                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, str(ts[i]), (ts[i].total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else ""))
         else:
+            if f.tell() == 0:
+                writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
             for i in range(len(ts)):
                 writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, str(ts[i]), (ts[i].total_seconds() - label[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
