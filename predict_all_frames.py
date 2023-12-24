@@ -32,7 +32,7 @@ def _predict(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    model = CNN34ManyFrms.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
+    model = CNN34ManyFrms.load_from_checkpoint(ckpt_file, loss_weight=torch.empty(10, dtype=torch.float32), map_location=torch.device("cuda", 0))
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
