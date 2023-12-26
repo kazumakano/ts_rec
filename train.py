@@ -21,7 +21,7 @@ def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: str, ckpt
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
         callbacks=ModelCheckpoint(monitor="validation_loss", save_last=True),
         devices=[gpu_id],
-        max_epochs=param["max_epoch"],
+        max_epochs=param["epoch"],
         accelerator="gpu"
     )
 

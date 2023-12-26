@@ -1,6 +1,6 @@
 batch_size: 1024
-learning_rate: 0.1
-max_epoch: 100
+epoch: 2000
+learning_rate: 0.002
 num_workers: 4
 shuffle: True
 
@@ -8,5 +8,5 @@ conv_ch_1: 64
 conv_ch_2: 64
 conv_ch_3: 32
 conv_ks_1: 7
-conv_ks_2: 3
-conv_ks_3: 1
+conv_ks_2: 5
+conv_ks_3: 3
