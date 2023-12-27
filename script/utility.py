@@ -294,6 +294,13 @@ def read_head_n_frms(file: str, n: int, start_idx: int = 0) -> np.ndarray:
 
     return np.stack(frms)
 
+def _timedelta2str(t: timedelta, restrict_fmt: bool = True) -> str:
+    if restrict_fmt:
+        return str(t % timedelta(days=1))      # 1 day, 1:23:45 -> 1:23:45
+    else:
+        t_in_sec = round(t.total_seconds())    # 1 day, 1:23:45 -> 25:23:45
+        return f"{t_in_sec // 3600}:{t_in_sec % 3600 // 60:02d}:{t_in_sec % 60:02d}"
+
 @overload
 def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
     ...
@@ -309,10 +316,12 @@ def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, 
         if isinstance(cam_name, str):
             if f.tell() == 0:
                 writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec", "is_inconsis"))
-            for i in range(len(ts)):
-                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, str(ts[i]), (ts[i].total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else ""))
+            t: timedelta
+            for i, t in enumerate(ts):
+                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, _timedelta2str(t), (t.total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else ""))
         else:
             if f.tell() == 0:
                 writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
-            for i in range(len(ts)):
-                writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, str(ts[i]), (ts[i].total_seconds() - label[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
+            t: timedelta
+            for i, t in enumerate(ts):
+                writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, _timedelta2str(t), (t.total_seconds() - label[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
