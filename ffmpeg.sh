@@ -9,4 +9,5 @@ for f in $(find $1/camera$3*/video_??-??-??_*.mkv); do
 
     echo "encoding $dir_name/${file_name:0:-4}.mp4"
     ffmpeg -y -i $f -vcodec h264_nvenc -vf fps=5 $2/$dir_name/${file_name:0:-4}.mp4 2>> $2/log.txt
+    echo >> $2/log.txt
 done
