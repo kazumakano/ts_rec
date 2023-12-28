@@ -1,6 +1,6 @@
 import csv
 import os.path as path
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional, overload
 import cv2
 import numpy as np
@@ -294,12 +294,16 @@ def read_head_n_frms(file: str, n: int, start_idx: int = 0) -> np.ndarray:
 
     return np.stack(frms)
 
-def _timedelta2str(t: timedelta, restrict_fmt: bool = True) -> str:
+def write_date(date: date, result_dir: str) -> None:
+    with open(path.join(result_dir, "date.txt"), mode="w") as f:
+        f.write(str(date) + "\n")
+
+def _timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
     if restrict_fmt:
-        return str(t % timedelta(days=1))      # 1 day, 1:23:45 -> 1:23:45
+        return str(ts % timedelta(days=1))       # 1 day, 1:23:45 -> 1:23:45
     else:
-        t_in_sec = round(t.total_seconds())    # 1 day, 1:23:45 -> 25:23:45
-        return f"{t_in_sec // 3600}:{t_in_sec % 3600 // 60:02d}:{t_in_sec % 60:02d}"
+        ts_in_sec = round(ts.total_seconds())    # 1 day, 1:23:45 -> 25:23:45
+        return f"{ts_in_sec // 3600}:{ts_in_sec % 3600 // 60:02d}:{ts_in_sec % 60:02d}"
 
 @overload
 def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:

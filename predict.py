@@ -1,5 +1,6 @@
 import logging
 import os.path as path
+from datetime import datetime
 from glob import iglob
 from typing import Optional
 import pytorch_lightning as pl
@@ -16,6 +17,9 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
+    result_dir = util.get_result_dir(result_dir_name)
+    util.write_date(datetime.strptime(path.basename(path.normpath(vid_dir)), "%Y-%m-%d").date(), result_dir)
+
     if isinstance(param, str):
         param = util.load_param(param)
 
@@ -23,7 +27,7 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[gpu_id],
-        logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
+        logger=TensorBoardLogger(result_dir, name=None, default_hp_metric=False),
         enable_progress_bar=False
     )
 
@@ -31,7 +35,7 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
     for d in tqdm(sorted(iglob(path.join(vid_dir, "camera*"))), desc="recognizing"):
         if exclude is None or exclude["camera"] is None or path.basename(d)[6:] not in exclude["camera"]:
             files = []
-            for f in sorted(iglob(path.join(d, "video_??-??-??_*.mkv"))):
+            for f in sorted(iglob(path.join(d, "video_??-??-??_+.mkv"))):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     files.append(f)
 
