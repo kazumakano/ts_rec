@@ -17,11 +17,9 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    result_dir = util.get_result_dir(result_dir_name)
-    util.write_date(datetime.strptime(path.basename(path.normpath(vid_dir)), "%Y-%m-%d").date(), result_dir)
-
     if isinstance(param, str):
         param = util.load_param(param)
+    result_dir = util.get_result_dir(result_dir_name)
 
     model = CNN3.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
     trainer = pl.Trainer(
@@ -35,12 +33,14 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
     for d in tqdm(sorted(iglob(path.join(vid_dir, "camera*"))), desc="recognizing"):
         if exclude is None or exclude["camera"] is None or path.basename(d)[6:] not in exclude["camera"]:
             files = []
-            for f in sorted(iglob(path.join(d, "video_??-??-??_+.mkv"))):
+            for f in sorted(iglob(path.join(d, "video_??-??-??_*.mkv"))):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     files.append(f)
 
             if len(files) > 0:
                 trainer.predict(model=model, dataloaders=DataLoader(VidDataset(files, show_progress=False), batch_size=6, num_workers=param["num_workers"]))
+
+    util.write_date(datetime.strptime(path.basename(path.normpath(vid_dir)), "%Y-%m-%d").date(), result_dir)
 
 if __name__ == "__main__":
     import argparse

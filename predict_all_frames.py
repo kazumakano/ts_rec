@@ -54,20 +54,18 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
     ray.init()
 
-    result_dir = util.get_result_dir(result_dir_name)
-    util.write_date(datetime.strptime(path.basename(path.normpath(vid_dir)), "%Y-%m-%d").date(), result_dir)
-
     if isinstance(param, str):
         param = util.load_param(param)
     if param["batch_size"] % 6 != 0:
         raise Exception("batch size must be divisible by 6")
+    result_dir = util.get_result_dir(result_dir_name)
 
     exclude = None if ex_file is None else util.load_param(ex_file)
     pid_queue = []
     for d in sorted(iglob(path.join(vid_dir, "camera*"))):
         cam_name = path.basename(d)[6:]
         if exclude is None or exclude["camera"] is None or cam_name not in exclude["camera"]:
-            for f in tqdm(sorted(iglob(path.join(d, "video_??-??-??_+.mp4"))), desc=f"recognizing camera {cam_name}"):
+            for f in tqdm(sorted(iglob(path.join(d, "video_??-??-??_*.mp4"))), desc=f"recognizing camera {cam_name}"):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     if len(pid_queue) >= GPU // GPU_PER_TASK:
                         finished_pid = ray.wait(pid_queue, num_returns=1)[0][0]
@@ -75,6 +73,8 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
                     pid_queue.append(_predict.remote(path.abspath(ckpt_file), param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), f))
 
     ray.get(pid_queue)
+
+    util.write_date(datetime.strptime(path.basename(path.normpath(vid_dir)), "%Y-%m-%d").date(), result_dir)
 
 if __name__ == "__main__":
     import argparse
