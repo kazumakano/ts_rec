@@ -76,7 +76,7 @@ class VidDataset4ManyFrms(VidDataset):
         self.vid_idx = int(file_name[15:-4])
         self.label_at_start_frm = util.calc_ts_from_name(file_name, sec_per_file) if label_at_start_frm is None else label_at_start_frm
 
-        frms = util.read_head_n_frms(file, max_frm_num, self.start_frm_idx)
+        frms = util.read_head_n_frms(file, max_frm_num, True, self.start_frm_idx)
         self.img = torch.empty((len(frms), 6, 3, 22, 17), dtype=torch.float32)
         for i, frm in enumerate(tqdm(frms, desc="loading video", disable=not show_progress)):
             for j, tmp_img in enumerate(util.extract_ts_fig(frm)):

@@ -263,7 +263,7 @@ def random_split(files: list[str], prop: tuple[float, float, float], seed: int =
 
     return train_files, val_files, test_files
 
-def read_head_n_frms(file: str, n: int, start_idx: int = 0) -> np.ndarray:
+def read_head_n_frms(file: str, n: int, skip_one_by_one: bool = False, start_idx: int = 0) -> np.ndarray:
     """
     Read first n frames.
 
@@ -273,6 +273,8 @@ def read_head_n_frms(file: str, n: int, start_idx: int = 0) -> np.ndarray:
         Path to video file.
     n : int
         Maximum number of frames to read.
+    skip_one_by_one : bool, optional
+        Whether to skip frames one by one.
     start_idx : int, optional
         Index of first frame to read.
 
@@ -284,7 +286,12 @@ def read_head_n_frms(file: str, n: int, start_idx: int = 0) -> np.ndarray:
     """
 
     cap = cv2.VideoCapture(filename=file)
-    cap.set(cv2.CAP_PROP_POS_FRAMES, start_idx)
+    if skip_one_by_one:
+        for _ in range(start_idx):
+            ret, frm = cap.read()
+    else:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_idx)
+
     frms = []
     for _ in range(n):
         ret, frm = cap.read()
@@ -292,7 +299,7 @@ def read_head_n_frms(file: str, n: int, start_idx: int = 0) -> np.ndarray:
             break
         frms.append(frm)
 
-    return np.stack(frms)
+    return np.empty((0, int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8) if len(frms) == 0 else np.stack(frms)
 
 def write_date(date: date, result_dir: str) -> None:
     with open(path.join(result_dir, "date.txt"), mode="w") as f:
