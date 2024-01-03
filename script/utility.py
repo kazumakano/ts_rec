@@ -1,11 +1,15 @@
 import csv
+import math
 import os.path as path
 from datetime import date, datetime, timedelta
+from glob import glob
 from typing import Optional, overload
 import cv2
 import numpy as np
+import pandas as pd
 import torch
 import yaml
+from matplotlib import pyplot as plt
 from scipy.special import softmax
 from torchvision import transforms as T
 
@@ -243,6 +247,22 @@ def get_result_dir(dir_name: str | None) -> str:
 def load_param(file: str) -> dict[str, Param | list[Param] | list[str]]:
     with open(file) as f:
         return yaml.safe_load(f)
+
+def plot_all_predict_results(cam_name: str, result_dir: str, ver: int = 0) -> None:
+    with open(path.join(result_dir, "date.txt")) as f:
+        true_date = datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
+
+    files = glob(path.join(result_dir, cam_name, f"??-??-??_*/version_{ver}/predict_results.csv"))
+    fig, axes = plt.subplots(nrows=math.ceil(len(files) / 2), ncols=2, figsize=(16, 4 * math.ceil(len(files) / 2)))
+    for i, f in enumerate(files):
+        results = pd.read_csv(f)
+        ts = np.empty(len(results), dtype=datetime)
+        for j, t in enumerate(results.loc[:, "recog"]):
+            ts[j] = datetime.strptime(t, "%H:%M:%S") + (true_date - date(1900, 1, 1))
+
+        axes[i // 2, i % 2].scatter(results.index, ts, s=1)
+        axes[i // 2, i % 2].set_title(f"video {path.basename(path.dirname(path.dirname(f)))[9:]}")
+    fig.show()
 
 def random_split(files: list[str], prop: tuple[float, float, float], seed: int = 0) -> tuple[list[str], list[str], list[str]]:
     mixed_idxes = torch.randperm(len(files), generator=torch.Generator().manual_seed(seed), dtype=torch.int32).numpy()
