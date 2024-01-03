@@ -255,7 +255,7 @@ def plot_all_predict_results(cam_name: str, result_dir: str, ver: int = 0) -> No
     files = glob(path.join(result_dir, cam_name, f"??-??-??_*/version_{ver}/predict_results.csv"))
     fig, axes = plt.subplots(nrows=math.ceil(len(files) / 2), ncols=2, figsize=(16, 4 * math.ceil(len(files) / 2)))
     for i, f in enumerate(files):
-        results = pd.read_csv(f)
+        results = pd.read_csv(f, usecols=("recog", ))
         ts = np.empty(len(results), dtype=datetime)
         for j, t in enumerate(results.loc[:, "recog"]):
             ts[j] = datetime.strptime(t, "%H:%M:%S") + (true_date - date(1900, 1, 1))
@@ -326,11 +326,30 @@ def write_date(date: date, result_dir: str) -> None:
         f.write(str(date) + "\n")
 
 def _timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
-    if restrict_fmt:
-        return str(ts % timedelta(days=1))       # 1 day, 1:23:45 -> 1:23:45
-    else:
-        ts_in_sec = round(ts.total_seconds())    # 1 day, 1:23:45 -> 25:23:45
-        return f"{ts_in_sec // 3600}:{ts_in_sec % 3600 // 60:02d}:{ts_in_sec % 60:02d}"
+    """
+    Convert timestamp to string.
+
+    Parameters
+    ----------
+    ts : timedelta
+        Timestamp in timedelta.
+    restrict_fmt : bool, optional
+        Whether to restrict hour to no more than 24.
+
+    Returns
+    -------
+    ts : str
+        Timestamp in string.
+
+    Examples
+    --------
+    >>> _timedelta2str(timedelta(days=1, hours=1, minutes=23, seconds=45))
+    '01:23:45'
+    >>> _timedelta2str(timedelta(days=1, hours=1, minutes=23, seconds=45), restrict_fmt=False)
+    '25:23:45'
+    """
+
+    return f"{(ts % timedelta(days=1) if restrict_fmt else ts) // timedelta(hours=1):02d}:{ts % timedelta(hours=1) // timedelta(minutes=1):02d}:{ts % timedelta(minutes=1) // timedelta(seconds=1):02d}"
 
 @overload
 def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
