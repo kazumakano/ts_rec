@@ -21,7 +21,7 @@ GPU_PER_TASK : float
     Number of gpus per one task.
 MAX_FRM_NUM : int
     Maximum number of frames to load at once.
-    Consider to reduce this number if out of memory.
+    Consider to reduce this if out of memory.
 """
 
 GPU = 1
