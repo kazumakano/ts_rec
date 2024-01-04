@@ -25,8 +25,8 @@ MAX_FRM_NUM : int
 """
 
 GPU = 1
-GPU_PER_TASK = 0.2
-MAX_FRM_NUM = 1024
+GPU_PER_TASK = 1
+MAX_FRM_NUM = 512
 
 @ray.remote(num_gpus=GPU_PER_TASK)
 def _predict(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
@@ -44,9 +44,9 @@ def _predict(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_
     dataset_idx = 0
     while True:
         dataset = VidDataset4ManyFrms(vid_file, None if dataset_idx == 0 else model.ts_at_end_frm, MAX_FRM_NUM, dataset_idx * MAX_FRM_NUM, show_progress=False)
-        trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=param["batch_size"], num_workers=param["num_workers"]))
-        if len(dataset) < 6 * MAX_FRM_NUM:
+        if len(dataset) == 0:
             break
+        trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=param["batch_size"], num_workers=param["num_workers"]))
         dataset_idx += 1
 
 def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir: str, ex_file: Optional[str] = None, gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
