@@ -13,7 +13,7 @@ import script.utility as util
 from script.model import CNN3
 from script.callback import BestValLossReporter, SlackBot
 
-GPU_PER_TRIAL = 1
+GPU_PER_TRIAL = 0.5
 MAX_PEND_TRIAL_NUM = 1
 VISIBLE_GPU = (0, 1, 2, 3, 4, 5, 6, 7)
 
