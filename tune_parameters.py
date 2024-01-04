@@ -15,7 +15,6 @@ from script.callback import BestValLossReporter, SlackBot
 
 GPU_PER_TRIAL = 0.5
 MAX_PEND_TRIAL_NUM = 1
-VISIBLE_GPU = (0, 1, 2, 3, 4, 5, 6, 7)
 
 def _get_grid_param_space(param_list: dict[str, list[util.Param]]) -> dict[str, dict[str, list[util.Param]]]:
     param_space = {}
@@ -42,8 +41,8 @@ def _try(param: dict[str, util.Param]) -> None:
 
         trainer.fit(CNN3(param, torch.from_numpy(len(datamodule.dataset["train"].label) / datamodule.dataset["train"].breakdown).to(dtype=torch.float32)), datamodule=datamodule)
 
-def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in VISIBLE_GPU])
+def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Optional[str] = None, gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
     os.environ["TUNE_MAX_PENDING_TRIALS_PG"] = str(MAX_PEND_TRIAL_NUM)
 
     param_list = util.load_param(param_list_file)
@@ -72,7 +71,8 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--param_list_file", required=True, help="specify parameter list file", metavar="PATH_TO_PARAM_LIST_FILE")
     parser.add_argument("-d", "--ts_fig_dir", nargs="+", help="specify timestamp figure dataset directory", metavar="PATH_TO_TS_FIG_DIR")
     parser.add_argument("-b", "--bot_conf_file", help="enable slack bot", metavar="PATH_TO_BOT_CONF_FILE")
+    parser.add_argument("-g", "--gpu_ids", nargs="*", type=int, help="specify list of GPU device IDs", metavar="GPU_ID")
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
     args = parser.parse_args()
 
-    tune_params(args.param_list_file, args.ts_fig_dir, args.bot_conf_file, args.result_dir_name)
+    tune_params(args.param_list_file, args.ts_fig_dir, args.bot_conf_file, args.gpu_ids, args.result_dir_name)
