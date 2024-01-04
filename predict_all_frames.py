@@ -25,8 +25,8 @@ MAX_FRM_NUM : int
 """
 
 GPU = 1
-GPU_PER_TASK = 1
-MAX_FRM_NUM = 512
+GPU_PER_TASK = 0.2
+MAX_FRM_NUM = 128
 
 @ray.remote(num_gpus=GPU_PER_TASK)
 def _predict(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
