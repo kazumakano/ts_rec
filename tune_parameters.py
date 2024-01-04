@@ -41,7 +41,8 @@ def _try(param: dict[str, util.Param]) -> None:
         trainer.fit(CNN3(param, torch.from_numpy(len(datamodule.dataset["train"].label) / datamodule.dataset["train"].breakdown).to(dtype=torch.float32)), datamodule=datamodule)
 
 def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Optional[str] = None, gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
+    if gpu_ids is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
     os.environ["TUNE_MAX_PENDING_TRIALS_PG"] = "1"
 
     param_list = util.load_param(param_list_file)
