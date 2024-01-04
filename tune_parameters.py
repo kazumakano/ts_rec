@@ -14,7 +14,6 @@ from script.model import CNN3
 from script.callback import BestValLossReporter, SlackBot
 
 GPU_PER_TRIAL = 0.5
-MAX_PEND_TRIAL_NUM = 1
 
 def _get_grid_param_space(param_list: dict[str, list[util.Param]]) -> dict[str, dict[str, list[util.Param]]]:
     param_space = {}
@@ -43,7 +42,7 @@ def _try(param: dict[str, util.Param]) -> None:
 
 def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Optional[str] = None, gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
-    os.environ["TUNE_MAX_PENDING_TRIALS_PG"] = str(MAX_PEND_TRIAL_NUM)
+    os.environ["TUNE_MAX_PENDING_TRIALS_PG"] = "1"
 
     param_list = util.load_param(param_list_file)
     result_dir = util.get_result_dir(result_dir_name)
