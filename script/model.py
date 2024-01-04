@@ -81,7 +81,15 @@ class _BaseModule(pl.LightningModule):
                     estim,
                     self.trainer.predict_dataloaders.dataset.label
                 ), f)
-        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, util.get_most_likely_ts(estim), self.trainer.predict_dataloaders.dataset.label, self.trainer.predict_dataloaders.dataset.frm_num, self.logger.log_dir)
+
+        util.write_predict_result(
+            self.trainer.predict_dataloaders.dataset.cam_name,
+            self.trainer.predict_dataloaders.dataset.vid_idx,
+            util.get_most_likely_ts(estim),
+            self.trainer.predict_dataloaders.dataset.label,
+            self.trainer.predict_dataloaders.dataset.frm_num,
+            self.logger.log_dir
+        )
 
 class _BaseModule4ManyFrms(_BaseModule):
     def predict_step(self, batch: torch.Tensor, _: int) -> torch.Tensor:
@@ -92,8 +100,18 @@ class _BaseModule4ManyFrms(_BaseModule):
 
     def on_predict_end(self) -> None:
         estim = torch.vstack(self.predict_outputs).cpu().numpy()
-        estim_ts, unreliable_frm_idxes = util.get_consis_ts(estim, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx != 0)
-        util.write_predict_result(self.trainer.predict_dataloaders.dataset.cam_name, self.trainer.predict_dataloaders.dataset.vid_idx, estim_ts, self.trainer.predict_dataloaders.dataset.label_at_start_frm, self.trainer.predict_dataloaders.dataset.start_frm_idx, self.logger.log_dir, unreliable_frm_idxes)
+
+        estim_ts = util.get_most_likely_ts(estim)
+        util.write_predict_result(
+            self.trainer.predict_dataloaders.dataset.cam_name,
+            self.trainer.predict_dataloaders.dataset.vid_idx,
+            estim_ts,
+            self.trainer.predict_dataloaders.dataset.label_at_start_frm,
+            self.trainer.predict_dataloaders.dataset.start_frm_idx,
+            self.logger.log_dir,
+            util.check_ts_consis(estim_ts, None if self.trainer.predict_dataloaders.dataset.start_frm_idx == 0 else self.trainer.predict_dataloaders.dataset.label_at_start_frm)
+        )
+
         self.ts_at_end_frm = estim_ts[-1]
 
 class CNN2(_BaseModule):
