@@ -29,7 +29,7 @@ GPU_PER_TASK = 0.2
 MAX_FRM_NUM = 128
 
 @ray.remote(num_gpus=GPU_PER_TASK)
-def _predict(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
+def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
@@ -70,7 +70,7 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
                     if len(pid_queue) >= GPU // GPU_PER_TASK:
                         finished_pid = ray.wait(pid_queue, num_returns=1)[0][0]
                         pid_queue.remove(finished_pid)
-                    pid_queue.append(_predict.remote(path.abspath(ckpt_file), param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), f))
+                    pid_queue.append(_predict_by_file.remote(path.abspath(ckpt_file), param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), f))
 
     ray.get(pid_queue)
 
