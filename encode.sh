@@ -5,6 +5,10 @@ fi
 
 for d in $(find $1/camera$3* -maxdepth 0); do
     dir_name=$(basename $d)
+    if [ ! -d $2/$dir_name/ ]; then
+        mkdir $2/$dir_name/
+    fi
+
     for f in $(find $d/video_??-??-??_*.mkv); do
         file_name=$(basename $f)
         echo "encoding $(basename $d)/${file_name:0:-4}.mp4"
