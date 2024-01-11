@@ -1,6 +1,7 @@
 import csv
 import math
 import os.path as path
+import pickle
 from datetime import date, datetime, timedelta
 from glob import glob
 from typing import Optional, overload
@@ -248,6 +249,10 @@ def load_param(file: str) -> dict[str, Param | list[Param] | list[str]]:
     with open(file) as f:
         return yaml.safe_load(f)
 
+def load_test_result(result_dir: str, ver: int = 0) -> tuple[tuple[np.ndarray, np.ndarray, np.ndarray], dict[str, Param]]:
+    with open(path.join(result_dir, f"version_{ver}/", "test_outputs.pkl"), mode="rb") as f:
+        return pickle.load(f), load_param(path.join(result_dir, f"version_{ver}/", "hparams.yaml"))
+
 def plot_all_predict_results(cam_name: str, result_dir: str, ver: int = 0) -> None:
     with open(path.join(result_dir, "date.txt")) as f:
         true_date = datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
@@ -325,7 +330,7 @@ def write_date(date: date, result_dir: str) -> None:
     with open(path.join(result_dir, "date.txt"), mode="w") as f:
         f.write(str(date) + "\n")
 
-def _timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
+def timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
     """
     Convert timestamp to string.
 
@@ -343,9 +348,9 @@ def _timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
 
     Examples
     --------
-    >>> _timedelta2str(timedelta(days=1, hours=1, minutes=23, seconds=45))
+    >>> timedelta2str(timedelta(days=1, hours=1, minutes=23, seconds=45))
     '01:23:45'
-    >>> _timedelta2str(timedelta(days=1, hours=1, minutes=23, seconds=45), restrict_fmt=False)
+    >>> timedelta2str(timedelta(days=1, hours=1, minutes=23, seconds=45), restrict_fmt=False)
     '25:23:45'
     """
 
@@ -368,10 +373,10 @@ def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, 
                 writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec", "is_inconsis"))
             t: timedelta
             for i, t in enumerate(ts):
-                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, _timedelta2str(t), (t.total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else ""))
+                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, timedelta2str(t), (t.total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else ""))
         else:
             if f.tell() == 0:
                 writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
             t: timedelta
             for i, t in enumerate(ts):
-                writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, _timedelta2str(t), (t.total_seconds() - label[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
+                writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, timedelta2str(t), (t.total_seconds() - label[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
