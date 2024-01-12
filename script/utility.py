@@ -373,7 +373,7 @@ def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, 
                 writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec", "is_inconsis"))
             t: timedelta
             for i, t in enumerate(ts):
-                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, timedelta2str(t), (t.total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else ""))
+                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, timedelta2str(t), (t.total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else None))
         else:
             if f.tell() == 0:
                 writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
