@@ -68,8 +68,7 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
             for f in tqdm(sorted(iglob(path.join(d, "video_??-??-??_*.mp4"))), desc=f"recognizing camera {cam_name}"):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     if len(pid_queue) >= GPU // GPU_PER_TASK:
-                        finished_pid = ray.wait(pid_queue, num_returns=1)[0][0]
-                        pid_queue.remove(finished_pid)
+                        pid_queue.remove(ray.wait(pid_queue, num_returns=1)[0][0])
                     pid_queue.append(_predict_by_file.remote(path.abspath(ckpt_file), param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), f))
 
     ray.get(pid_queue)
