@@ -68,7 +68,7 @@ class VidDataset(data.Dataset):
         return 6 * len(self.img)
 
 class VidDataset4ManyFrms(VidDataset):
-    def __init__(self, file: str, label_at_start_frm: Optional[timedelta] = None, max_frm_num: int = 1024, start_frm_idx: int = 0, norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
+    def __init__(self, file: str, max_frm_num: int, label_at_start_frm: Optional[timedelta] = None, start_frm_idx: int = 0, norm: bool = False, sec_per_file: float = 1791, show_progress: bool = True) -> None:
         self.start_frm_idx = start_frm_idx
 
         self.cam_name = path.basename(path.dirname(file))[6:]

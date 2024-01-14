@@ -43,7 +43,7 @@ def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: s
 
     dataset_idx = 0
     while True:
-        dataset = VidDataset4ManyFrms(vid_file, None if dataset_idx == 0 else model.ts_at_end_frm, MAX_FRM_NUM, dataset_idx * MAX_FRM_NUM, show_progress=False)
+        dataset = VidDataset4ManyFrms(vid_file, MAX_FRM_NUM, None if dataset_idx == 0 else model.ts_at_end_frm, dataset_idx * MAX_FRM_NUM, show_progress=False)
         if len(dataset) == 0:
             break
         trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=param["batch_size"], num_workers=param["num_workers"]))
