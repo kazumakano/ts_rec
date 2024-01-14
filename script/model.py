@@ -18,14 +18,14 @@ class _BaseModule(pl.LightningModule):
     def configure_optimizers(self) -> optim.SGD:
         return optim.SGD(self.parameters(), lr=self.hparams["learning_rate"])
 
-    def training_step(self, batch: torch.Tensor) -> torch.Tensor:
+    def training_step(self, batch: list[torch.Tensor]) -> torch.Tensor:
         estim = self(batch[0])
         loss = self.criterion(estim, batch[1])
         self.log("train_loss", loss, on_step=False, on_epoch=True)
 
         return loss
 
-    def validation_step(self, batch: torch.Tensor, _: int) -> None:
+    def validation_step(self, batch: list[torch.Tensor], _: int) -> None:
         estim = self(batch[0])
         loss = self.criterion(estim, batch[1])
         self.log("validation_loss", loss)
@@ -33,7 +33,7 @@ class _BaseModule(pl.LightningModule):
     def on_test_start(self) -> None:
         self.test_outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = []
 
-    def test_step(self, batch: torch.Tensor, _: int) -> None:
+    def test_step(self, batch: list[torch.Tensor], _: int) -> None:
         self.test_outputs.append((batch[0], self(batch[0]), batch[1]))
 
     def on_test_end(self) -> None:
