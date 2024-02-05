@@ -21,6 +21,8 @@ class CsvDataset(data.Dataset):
         gt = pd.read_csv(gt_file, usecols=("cam", "vid_idx", "recog"))
         gt = gt.loc[gt.loc[:, "vid_idx"] == vid_idx]
         cap = cv2.VideoCapture(glob(path.join(vid_dir, f"camera{gt.loc[0, 'cam']}/video_??-??-??_{vid_idx:02d}.mp4"))[0])
+        if cap.get(cv2.CAP_PROP_FRAME_COUNT) != len(gt):
+            raise Exception("number of video frames and length of ground truth do not match")
 
         self.img = torch.empty((6 * self.aug_num * len(gt), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(6 * len(gt), dtype=torch.int64)
