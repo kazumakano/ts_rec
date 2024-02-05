@@ -1,8 +1,10 @@
+import math
 import os.path as path
+import random
 from datetime import timedelta
 from glob import glob, iglob
-from os import mkdir
-from typing import Optional, Self
+from os import makedirs, mkdir
+from typing import Generator, Literal, Optional, Self
 import cv2
 import numpy as np
 import pandas as pd
@@ -14,11 +16,27 @@ from tqdm import tqdm
 from . import utility as util
 
 
+class _MultiDataLoader:
+    def __init__(self, batch_size: int, shuffle: bool, num_workers: int, data_files: list[str]) -> None:
+        self.batch_size, self.shuffle, self.num_workers = batch_size, shuffle, num_workers
+        self.data_files = data_files
+        self.len = 0
+        for f in self.data_files:
+            self.len += math.ceil(len(torch.load(f)) / self.batch_size)
+
+    def __iter__(self) -> Generator[list[torch.Tensor], None, None]:
+        for f in random.sample(self.data_files, len(self.data_files)) if self.shuffle else self.data_files:
+            for b in data.DataLoader(torch.load(f), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers):
+                yield b
+
+    def __len__(self) -> int:
+        return self.len
+
 class CsvDataset(data.Dataset):
-    def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False) -> None:
+    def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 5) -> None:
         self.aug_num = aug_num
 
-        df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog"))
+        df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog"))[::stride]
         df = df.loc[df.loc[:, "vid_idx"] == vid_idx]
         cap = cv2.VideoCapture(glob(path.join(vid_dir, f"camera{df.loc[0, 'cam']}/video_??-??-??_{vid_idx:02d}.mp4"))[0])
         if cap.get(cv2.CAP_PROP_FRAME_COUNT) != len(df):
@@ -182,3 +200,65 @@ class DataModule(pl.LightningDataModule):
             "num_workers": param_list["num_workers"][0],
             "shuffle": param_list["shuffle"][0]
         }
+
+class DataModule4CsvAndTsFig(DataModule):
+    def __init__(self, csv_split_file: str, vid_dir: str, ts_fig_dir: list[str], param: dict[str, util.Param], result_dir: str, seed: int = 0) -> None:
+        super().__init__()
+
+        self.data_files: dict[str, list[str]] = {}
+        self.save_hyperparameters(param)
+        self.result_dir = result_dir
+
+        self.csv_split = util.load_param(csv_split_file)
+        self.vid_dir = vid_dir
+
+        files = []
+        for d in ts_fig_dir:
+            files += glob(path.join(d, "*_[0-9].tif"))
+        files = util.random_split(files, (0.8, 0.1, 0.1), seed)
+        self.ts_fig_split = {"train": files[0], "validate": files[1], "test": files[2]}
+
+    def setup(self, stage: str) -> None:
+        match stage:
+            case "fit":
+                if "train" not in self.data_files.keys():
+                    self._load_and_save("train", self.csv_split, self.vid_dir)
+                    self._load_and_save("validate", self.csv_split, self.vid_dir)
+            case "test":
+                self._load_and_save("test", self.csv_split, self.vid_dir)
+
+    def train_dataloader(self) -> data.DataLoader | _MultiDataLoader:
+        if len(self.data_files["train"]) == 1:
+            return data.DataLoader(torch.load(self.data_files["train"][0]), batch_size=self.hparams["batch_size"], shuffle=self.hparams["shuffle"], num_workers=self.hparams["num_workers"])
+        else:
+            return _MultiDataLoader(self.hparams["batch_size"], self.hparams["shuffle"], self.hparams["num_workers"], self.data_files["train"])
+
+    def val_dataloader(self) -> data.DataLoader | _MultiDataLoader:
+        if len(self.data_files["validate"]) == 1:
+            return data.DataLoader(torch.load(self.data_files["validate"][0]), batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
+        else:
+            return _MultiDataLoader(self.hparams["batch_size"], False, self.hparams["num_workers"], self.data_files["validate"])
+
+    def test_dataloader(self) -> data.DataLoader | _MultiDataLoader:
+        if len(self.data_files["test"]) == 1:
+            return data.DataLoader(torch.load(self.data_files["test"][0]), batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
+        else:
+            return _MultiDataLoader(self.hparams["batch_size"], False, self.hparams["num_workers"], self.data_files["test"])
+
+    def _load_and_save(self, mode: Literal["train", "validate", "test"]) -> None:
+        if not path.exists(self.result_dir):
+            makedirs(self.result_dir)
+
+        self.data_files[mode] = []
+        i = 0
+        for f in self.csv_split[mode]:
+            for j in pd.read_csv(f, usecols=("vid_idx", )).loc[:, "vid_idx"].unique():
+                dataset = CsvDataset(f, self.vid_dir, j)
+                data_file = path.join(self.result_dir, f"{mode}_data_{i}.pt")
+                torch.save(dataset, data_file)
+                self.data_files[mode].append(data_file)
+                i += 1
+        dataset = TsFigDataset(self.ts_fig_split[mode])
+        data_file = path.join(self.result_dir, f"{mode}_data_{i}.pt")
+        torch.save(dataset, data_file)
+        self.data_files[mode].append(data_file)
