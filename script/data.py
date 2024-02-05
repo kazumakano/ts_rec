@@ -5,6 +5,7 @@ from os import mkdir
 from typing import Optional, Self
 import cv2
 import numpy as np
+import pandas as pd
 import pytorch_lightning as pl
 import torch
 from torch.utils import data
@@ -12,6 +13,35 @@ from torchvision.transforms import functional as TF
 from tqdm import tqdm
 from . import utility as util
 
+
+class CsvDataset(data.Dataset):
+    def __init__(self, gt_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False) -> None:
+        self.aug_num = aug_num
+
+        gt = pd.read_csv(gt_file, usecols=("cam", "vid_idx", "recog"))
+        gt = gt.loc[gt.loc[:, "vid_idx"] == vid_idx]
+        cap = cv2.VideoCapture(glob(path.join(vid_dir, f"camera{gt.loc[0, 'cam']}/video_??-??-??_{vid_idx:02d}.mp4"))[0])
+
+        self.img = torch.empty((6 * self.aug_num * len(gt), 3, 22, 17), dtype=torch.float32)
+        self.label = torch.empty(6 * len(gt), dtype=torch.int64)
+        for i, (_, r) in enumerate(tqdm(gt.iterrows(), desc="loading timestamp figure images", total=len(gt))):
+            for j, tmp_img in enumerate(util.extract_ts_fig(cap.read()[1])):
+                self.img[self.aug_num * (6 * i + j):self.aug_num * (6 * i + j + 1)] = util.aug_img(TF.to_tensor(tmp_img), self.aug_num, brightness, contrast, hue, max_shift_len)
+            time_label = util.str2time(r["recog"])
+            self.label[6 * i] = time_label.hour // 10
+            self.label[6 * i + 1] = time_label.hour % 10
+            self.label[6 * i + 2] = time_label.minute // 10
+            self.label[6 * i + 3] = time_label.minute % 10
+            self.label[6 * i + 4] = time_label.second // 10
+            self.label[6 * i + 5] = time_label.second % 10
+        if norm:
+            self.img = TF.normalize(self.img, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.img[idx], self.label[idx // self.aug_num]
+
+    def __len__(self) -> int:
+        return len(self.img)
 
 class TsFigDataset(data.Dataset):
     def __init__(self, files: list[str], aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False) -> None:
