@@ -2,7 +2,7 @@ import csv
 import math
 import os.path as path
 import pickle
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from glob import glob
 from typing import Optional, overload
 import cv2
@@ -326,9 +326,8 @@ def read_head_n_frms(file: str, n: int, skip_one_by_one: bool = False, start_idx
 
     return np.empty((0, int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8) if len(frms) == 0 else np.stack(frms)
 
-def write_date(date: date, result_dir: str) -> None:
-    with open(path.join(result_dir, "date.txt"), mode="w") as f:
-        f.write(str(date) + "\n")
+def str2time(ts: str) -> time:
+    return datetime.strptime(ts, "%H:%M:%S").time()
 
 def timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
     """
@@ -355,6 +354,10 @@ def timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
     """
 
     return f"{(ts % timedelta(days=1) if restrict_fmt else ts) // timedelta(hours=1):02d}:{ts % timedelta(hours=1) // timedelta(minutes=1):02d}:{ts % timedelta(minutes=1) // timedelta(seconds=1):02d}"
+
+def write_date(date: date, result_dir: str) -> None:
+    with open(path.join(result_dir, "date.txt"), mode="w") as f:
+        f.write(str(date) + "\n")
 
 @overload
 def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
