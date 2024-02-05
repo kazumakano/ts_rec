@@ -36,7 +36,7 @@ class CsvDataset(data.Dataset):
     def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 5) -> None:
         self.aug_num = aug_num
 
-        df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog"))[::stride]
+        df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog"))
         df = df.loc[df.loc[:, "vid_idx"] == vid_idx]
         cap = cv2.VideoCapture(glob(path.join(vid_dir, f"camera{df.loc[0, 'cam']}/video_??-??-??_{vid_idx:02d}.mp4"))[0])
         if cap.get(cv2.CAP_PROP_FRAME_COUNT) != len(df):
@@ -203,7 +203,7 @@ class DataModule(pl.LightningDataModule):
 
 class DataModule4CsvAndTsFig(DataModule):
     def __init__(self, csv_split_file: str, vid_dir: str, ts_fig_dir: list[str], param: dict[str, util.Param], result_dir: str, seed: int = 0) -> None:
-        super().__init__()
+        pl.LightningDataModule.__init__(self)
 
         self.data_files: dict[str, list[str]] = {}
         self.save_hyperparameters(param)
@@ -222,10 +222,10 @@ class DataModule4CsvAndTsFig(DataModule):
         match stage:
             case "fit":
                 if "train" not in self.data_files.keys():
-                    self._load_and_save("train", self.csv_split, self.vid_dir)
-                    self._load_and_save("validate", self.csv_split, self.vid_dir)
+                    self._load_and_save("train")
+                    self._load_and_save("validate")
             case "test":
-                self._load_and_save("test", self.csv_split, self.vid_dir)
+                self._load_and_save("test")
 
     def train_dataloader(self) -> data.DataLoader | _MultiDataLoader:
         if len(self.data_files["train"]) == 1:
