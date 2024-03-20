@@ -16,22 +16,6 @@ from tqdm import tqdm
 from . import utility as util
 
 
-class _MultiDataLoader:
-    def __init__(self, batch_size: int, shuffle: bool, num_workers: int, data_files: list[str]) -> None:
-        self.batch_size, self.shuffle, self.num_workers = batch_size, shuffle, num_workers
-        self.data_files = data_files
-        self.len = 0
-        for f in self.data_files:
-            self.len += math.ceil(len(torch.load(f)) / self.batch_size)
-
-    def __iter__(self) -> Generator[list[torch.Tensor], None, None]:
-        for f in random.sample(self.data_files, len(self.data_files)) if self.shuffle else self.data_files:
-            for b in data.DataLoader(torch.load(f), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers):
-                yield b
-
-    def __len__(self) -> int:
-        return self.len
-
 class CsvDataset(data.Dataset):
     def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 5) -> None:
         self.aug_num = aug_num
@@ -44,7 +28,7 @@ class CsvDataset(data.Dataset):
 
         self.img = torch.empty((6 * self.aug_num * len(df), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(6 * len(df), dtype=torch.int64)
-        for i, (_, r) in enumerate(tqdm(df.iterrows(), desc="loading timestamp figure images", total=len(df))):
+        for i, (_, r) in enumerate(tqdm(df.iterrows(), desc="loading timestamp figure images", total=len(df))):    # stride should be implemented
             for j, tmp_img in enumerate(util.extract_ts_fig(cap.read()[1])):
                 self.img[self.aug_num * (6 * i + j):self.aug_num * (6 * i + j + 1)] = util.aug_img(TF.to_tensor(tmp_img), self.aug_num, brightness, contrast, hue, max_shift_len)
             time_label = util.str2time(r["recog"])
@@ -200,6 +184,22 @@ class DataModule(pl.LightningDataModule):
             "num_workers": param_list["num_workers"][0],
             "shuffle": param_list["shuffle"][0]
         }
+
+class _MultiDataLoader:
+    def __init__(self, batch_size: int, shuffle: bool, num_workers: int, data_files: list[str]) -> None:
+        self.batch_size, self.shuffle, self.num_workers = batch_size, shuffle, num_workers
+        self.data_files = data_files
+        self.len = 0
+        for f in self.data_files:
+            self.len += math.ceil(len(torch.load(f)) / self.batch_size)
+
+    def __iter__(self) -> Generator[list[torch.Tensor], None, None]:
+        for f in random.sample(self.data_files, len(self.data_files)) if self.shuffle else self.data_files:
+            for b in data.DataLoader(torch.load(f), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers):
+                yield b
+
+    def __len__(self) -> int:
+        return self.len
 
 class DataModule4CsvAndTsFig(DataModule):
     def __init__(self, csv_split_file: str, vid_dir: str, ts_fig_dir: list[str], param: dict[str, util.Param], result_dir: str, seed: int = 0) -> None:
