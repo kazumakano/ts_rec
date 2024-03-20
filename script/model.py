@@ -10,10 +10,12 @@ from . import utility as util
 
 
 class _BaseModule(pl.LightningModule):
-    def __init__(self, loss_weight: torch.Tensor | None) -> None:
+    def __init__(self, loss_weight: torch.Tensor | None, param: dict[str, util.Param] | None) -> None:
         super().__init__()
 
         self.criterion = nn.CrossEntropyLoss(weight=loss_weight)
+        if param is not None:
+            self.save_hyperparameters(param)
 
     def configure_optimizers(self) -> optim.SGD:
         return optim.SGD(self.parameters(), lr=self.hparams["learning_rate"])
@@ -116,9 +118,7 @@ class _BaseModule4ManyFrms(_BaseModule):
 
 class CNN2(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
-        super().__init__(loss_weight)
-
-        self.save_hyperparameters(param)
+        super().__init__(loss_weight, param)
 
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], param["conv_ks_1"])
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], param["conv_ks_2"])
@@ -137,9 +137,7 @@ class CNN2(_BaseModule):
 
 class CNN3(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
-        super().__init__(loss_weight)
-
-        self.save_hyperparameters(param)
+        super().__init__(loss_weight, param)
 
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], param["conv_ks_1"])
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], param["conv_ks_2"])
@@ -160,7 +158,7 @@ class CNN3(_BaseModule):
 
 class FullNet(_BaseModule):
     def __init__(self, loss_weight: Optional[torch.Tensor] = None) -> None:
-        super().__init__(loss_weight)
+        super().__init__(loss_weight, None)
 
         self.layers = nn.Sequential(
             nn.Linear(1122, 512),
@@ -179,9 +177,7 @@ class FullNet(_BaseModule):
 
 class VGG(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
-        super().__init__(loss_weight)
-
-        self.save_hyperparameters(param)
+        super().__init__(loss_weight, param)
 
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], 3)
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], 3)
