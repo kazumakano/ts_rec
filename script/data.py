@@ -17,7 +17,7 @@ from . import utility as util
 
 
 class CsvDataset(data.Dataset):
-    def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 5) -> None:
+    def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 1) -> None:
         self.aug_num = aug_num
 
         df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog"))
@@ -26,9 +26,10 @@ class CsvDataset(data.Dataset):
         if cap.get(cv2.CAP_PROP_FRAME_COUNT) != len(df):
             raise Exception("number of video frames and length of ground truth do not match")
 
+        df = df.loc[::stride]
         self.img = torch.empty((6 * self.aug_num * len(df), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(6 * len(df), dtype=torch.int64)
-        for i, (_, r) in enumerate(tqdm(df.iterrows(), desc="loading timestamp figure images", total=len(df))):    # stride should be implemented
+        for i, (_, r) in enumerate(tqdm(df.iterrows(), desc="loading timestamp figure images", total=len(df))):
             for j, tmp_img in enumerate(util.extract_ts_fig(cap.read()[1])):
                 self.img[self.aug_num * (6 * i + j):self.aug_num * (6 * i + j + 1)] = util.aug_img(TF.to_tensor(tmp_img), self.aug_num, brightness, contrast, hue, max_shift_len)
             time_label = util.str2time(r["recog"])
@@ -38,6 +39,8 @@ class CsvDataset(data.Dataset):
             self.label[6 * i + 3] = time_label.minute % 10
             self.label[6 * i + 4] = time_label.second // 10
             self.label[6 * i + 5] = time_label.second % 10
+            for _ in range(stride - 1):
+                cap.read()
         if norm:
             self.img = TF.normalize(self.img, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
