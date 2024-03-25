@@ -56,4 +56,4 @@ if __name__ == "__main__":
         args = parser.parse_args()
         lines = sys.stdin.readlines()
 
-        main(args.gpu_id, json.loads(lines[1]), args.ts_fig_dir, lines[3].rstrip(), args.result_dir_name)
+        train(args.gpu_id, json.loads(lines[1]), args.ts_fig_dir, lines[3].rstrip(), args.result_dir_name)
