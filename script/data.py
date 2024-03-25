@@ -26,10 +26,10 @@ class CsvDataset(data.Dataset):
         if cap.get(cv2.CAP_PROP_FRAME_COUNT) != len(df):
             raise Exception("number of video frames and length of ground truth do not match")
 
-        sharp_frm_idxes = []
         df = df.loc[::stride]
         self.img = torch.empty((6 * self.aug_num * len(df), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(6 * len(df), dtype=torch.int64)
+        sharp_frm_idxes = []
         for i, (_, r) in enumerate(tqdm(df.iterrows(), desc="loading timestamp figure images", total=len(df))):
             if pd.isna(r["is_smudged"]):
                 for j, tmp_img in enumerate(util.extract_ts_fig(cap.read()[1])):
