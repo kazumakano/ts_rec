@@ -60,6 +60,14 @@ class CsvDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.img)
 
+    @property
+    def breakdown(self) -> np.ndarray:
+        breakdown = np.empty(10, dtype=np.int32)
+        for i in range(10):
+            breakdown[i] = len(self.label[self.label == i])
+
+        return breakdown
+
 class TsFigDataset(data.Dataset):
     def __init__(self, files: list[str], aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False) -> None:
         self.aug_num = aug_num
@@ -257,6 +265,13 @@ class DataModule4CsvAndTsFig(DataModule):
             return data.DataLoader(torch.load(self.data_files["test"][0]), batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
         else:
             return _MultiDataLoader(self.hparams["batch_size"], False, self.hparams["num_workers"], self.data_files["test"])
+
+    def get_breakdown(self, mode: Literal["train", "validate", "test"]) -> np.ndarray:
+        breakdown = np.zeros(10, dtype=np.int32)
+        for f in self.data_files[mode]:
+            breakdown += torch.load(f).breakdown
+
+        return breakdown
 
     def _load_and_save(self, mode: Literal["train", "validate", "test"]) -> None:
         if not path.exists(self.result_dir):
