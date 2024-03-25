@@ -20,27 +20,37 @@ class CsvDataset(data.Dataset):
     def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 1) -> None:
         self.aug_num = aug_num
 
-        df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog"))
+        df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog", "is_smudged"))
         df = df.loc[df.loc[:, "vid_idx"] == vid_idx]
         cap = cv2.VideoCapture(glob(path.join(vid_dir, f"camera{df.loc[0, 'cam']}/video_??-??-??_{vid_idx:02d}.mp4"))[0])
         if cap.get(cv2.CAP_PROP_FRAME_COUNT) != len(df):
             raise Exception("number of video frames and length of ground truth do not match")
 
+        sharp_frm_idxes = []
         df = df.loc[::stride]
         self.img = torch.empty((6 * self.aug_num * len(df), 3, 22, 17), dtype=torch.float32)
         self.label = torch.empty(6 * len(df), dtype=torch.int64)
         for i, (_, r) in enumerate(tqdm(df.iterrows(), desc="loading timestamp figure images", total=len(df))):
-            for j, tmp_img in enumerate(util.extract_ts_fig(cap.read()[1])):
-                self.img[self.aug_num * (6 * i + j):self.aug_num * (6 * i + j + 1)] = util.aug_img(TF.to_tensor(tmp_img), self.aug_num, brightness, contrast, hue, max_shift_len)
-            time_label = util.str2time(r["recog"])
-            self.label[6 * i] = time_label.hour // 10
-            self.label[6 * i + 1] = time_label.hour % 10
-            self.label[6 * i + 2] = time_label.minute // 10
-            self.label[6 * i + 3] = time_label.minute % 10
-            self.label[6 * i + 4] = time_label.second // 10
-            self.label[6 * i + 5] = time_label.second % 10
+            if pd.isna(r["is_smudged"]):
+                for j, tmp_img in enumerate(util.extract_ts_fig(cap.read()[1])):
+                    self.img[self.aug_num * (6 * i + j):self.aug_num * (6 * i + j + 1)] = util.aug_img(TF.to_tensor(tmp_img), self.aug_num, brightness, contrast, hue, max_shift_len)
+                time_label = util.str2time(r["recog"])
+                self.label[6 * i] = time_label.hour // 10
+                self.label[6 * i + 1] = time_label.hour % 10
+                self.label[6 * i + 2] = time_label.minute // 10
+                self.label[6 * i + 3] = time_label.minute % 10
+                self.label[6 * i + 4] = time_label.second // 10
+                self.label[6 * i + 5] = time_label.second % 10
+                sharp_frm_idxes.append(i)
+            else:
+                cap.read()
+
             for _ in range(stride - 1):
                 cap.read()
+
+        self.img = self.img[[self.aug_num * (6 * i + j) + k for i in sharp_frm_idxes for j in range(6) for k in range(self.aug_num)]]
+        self.label = self.label[[6 * i + j for i in sharp_frm_idxes for j in range(6)]]
+
         if norm:
             self.img = TF.normalize(self.img, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
@@ -256,7 +266,7 @@ class DataModule4CsvAndTsFig(DataModule):
         i = 0
         for f in self.csv_split[mode]:
             for j in pd.read_csv(f, usecols=("vid_idx", )).loc[:, "vid_idx"].unique():
-                dataset = CsvDataset(f, self.vid_dir, j)
+                dataset = CsvDataset(f, self.vid_dir, j) if mode == "train" else CsvDataset(f, self.vid_dir, j, 1)
                 data_file = path.join(self.result_dir, f"{mode}_data_{i}.pt")
                 torch.save(dataset, data_file)
                 self.data_files[mode].append(data_file)
