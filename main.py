@@ -10,7 +10,7 @@ from script.data import DataModule
 from script.model import CNN3
 
 
-def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: str, ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
+def main(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: list[str], ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
     torch.set_float32_matmul_precision("high")
 
     if isinstance(param, str):
@@ -50,10 +50,10 @@ if __name__ == "__main__":
         parser.add_argument("-c", "--ckpt_file", help="specify checkpoint file", metavar="PATH_TO_CKPT_FILE")
         args = parser.parse_args()
 
-        train(args.gpu_id, args.param_file, args.ts_fig_dir, args.ckpt_file, args.result_dir_name)
+        main(args.gpu_id, args.param_file, args.ts_fig_dir, args.ckpt_file, args.result_dir_name)
 
     else:
         args = parser.parse_args()
         lines = sys.stdin.readlines()
 
-        train(args.gpu_id, json.loads(lines[1]), args.ts_fig_dir, lines[3].rstrip(), args.result_dir_name)
+        main(args.gpu_id, json.loads(lines[1]), args.ts_fig_dir, lines[3].rstrip(), args.result_dir_name)
