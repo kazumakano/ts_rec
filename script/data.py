@@ -286,7 +286,7 @@ class DataModule4CsvAndTsFig(DataModule):
                 torch.save(dataset, data_file)
                 self.data_files[mode].append(data_file)
                 i += 1
-        dataset = TsFigDataset(self.ts_fig_split[mode])
+        dataset = TsFigDataset(self.ts_fig_split[mode]) if mode == "train" else TsFigDataset(self.ts_fig_split[mode], 1)
         data_file = path.join(self.result_dir, f"{mode}_data_{i}.pt")
         torch.save(dataset, data_file)
         self.data_files[mode].append(data_file)
