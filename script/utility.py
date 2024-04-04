@@ -3,7 +3,7 @@ import math
 import os.path as path
 import pickle
 from datetime import date, datetime, time, timedelta
-from glob import glob
+from glob import glob, iglob
 from typing import Optional, overload
 import cv2
 import numpy as np
@@ -253,7 +253,28 @@ def load_test_result(result_dir: str, ver: int = 0) -> tuple[tuple[np.ndarray, n
     with open(path.join(result_dir, f"version_{ver}/", "test_outputs.pkl"), mode="rb") as f:
         return pickle.load(f), load_param(path.join(result_dir, f"version_{ver}/", "hparams.yaml"))
 
-def plot_all_predict_results(cam_name: str, result_dir: str, ver: int = 0) -> None:
+def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
+    with open(path.join(result_dir, "date.txt")) as f:
+        true_date = datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
+
+    dirs = glob(path.join(result_dir, "*/"))
+    fig, axes = plt.subplots(nrows=math.ceil(len(dirs) / 2), ncols=2, figsize=(16, 4 * math.ceil(len(dirs) / 2)))
+    for i, d in enumerate(dirs):
+        idx = np.empty(0, dtype=np.int64)
+        ts = np.empty(0, dtype=datetime)
+        for f in iglob(path.join(d, f"??-??-??_*/version_{ver}/predict_results.csv")):
+            results = pd.read_csv(f, usecols=("recog", ))
+            idx = np.hstack((idx, results.index + (0 if len(idx) == 0 else idx[-1])))
+            tmp = np.empty(len(results), dtype=datetime)
+            for j, t in enumerate(results.loc[:, "recog"]):
+                tmp[j] = datetime.strptime(t, "%H:%M:%S") + (true_date - date(1900, 1, 1))
+            ts = np.hstack((ts, tmp))
+
+        axes[i // 2, i % 2].scatter(idx, ts, s=1)
+        axes[i // 2, i % 2].set_title(f"camera {path.basename(path.normpath(d))}")
+    fig.show()
+
+def plot_all_predict_results_by_cam(cam_name: str, result_dir: str, ver: int = 0) -> None:
     with open(path.join(result_dir, "date.txt")) as f:
         true_date = datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
 
