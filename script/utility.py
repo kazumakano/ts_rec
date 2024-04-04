@@ -269,6 +269,10 @@ def plot_all_predict_results(cam_name: str, result_dir: str, ver: int = 0) -> No
         axes[i // 2, i % 2].set_title(f"video {path.basename(path.dirname(path.dirname(f)))[9:]}")
     fig.show()
 
+def plot_breakdown(breakdown: np.ndarray) -> None:
+    plt.pie(breakdown, labels=range(10), autopct="%d%%", startangle=90, counterclock=False)
+    plt.show()
+
 def random_split(files: list[str], prop: tuple[float, float, float], seed: int = 0) -> tuple[list[str], list[str], list[str]]:
     mixed_idxes = torch.randperm(len(files), generator=torch.Generator().manual_seed(seed), dtype=torch.int32).numpy()
 
