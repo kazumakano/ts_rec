@@ -274,7 +274,7 @@ def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
         axes[i // 2, i % 2].set_title(f"camera {path.basename(path.normpath(d))}")
     fig.show()
 
-def plot_all_predict_results_by_cam(cam_name: str, result_dir: str, ver: int = 0) -> None:
+def plot_predict_results_by_cam(cam_name: str, result_dir: str, ver: int = 0) -> None:
     with open(path.join(result_dir, "date.txt")) as f:
         true_date = datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
 
