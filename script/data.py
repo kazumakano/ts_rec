@@ -214,14 +214,14 @@ class _MultiDataLoader:
 
     def __iter__(self) -> Generator[list[torch.Tensor], None, None]:
         data_queue = Queue(maxsize=self.queue_size)
-        loader = threading.Thread(target=self._load, args=(data_queue, ), daemon=True)
+        loader = threading.Thread(target=self._load_asyncly, args=(data_queue, ), daemon=True)
         loader.start()
 
         while loader.is_alive() or not data_queue.empty():
             for b in data.DataLoader(data_queue.get(), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers, drop_last=self.drop_last):
                 yield b
 
-    def _load(self, queue: Queue) -> None:
+    def _load_asyncly(self, queue: Queue) -> None:
         for f in random.sample(self.data_files, len(self.data_files)) if self.shuffle else self.data_files:
             try:
                 queue.put(torch.load(f))
