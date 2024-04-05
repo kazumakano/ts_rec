@@ -1,9 +1,10 @@
-import math
 import os.path as path
 import random
+import threading
 from datetime import timedelta
 from glob import glob, iglob
 from os import makedirs, mkdir
+from queue import Queue
 from typing import Generator, Literal, Optional, Self
 import cv2
 import numpy as np
@@ -207,20 +208,25 @@ class DataModule(pl.LightningDataModule):
         }
 
 class _MultiDataLoader:
-    def __init__(self, batch_size: int, shuffle: bool, num_workers: int, data_files: list[str]) -> None:
-        self.batch_size, self.shuffle, self.num_workers = batch_size, shuffle, num_workers
+    def __init__(self, batch_size: int, drop_last: bool, shuffle: bool, num_workers: int, data_files: list[str], queue_size: int = 1) -> None:
+        self.batch_size, self.drop_last, self.shuffle, self.num_workers, self.queue_size = batch_size, drop_last, shuffle, num_workers, queue_size
         self.data_files = data_files
-        self.len = 0
-        for f in self.data_files:
-            self.len += math.ceil(len(torch.load(f)) / self.batch_size)
 
     def __iter__(self) -> Generator[list[torch.Tensor], None, None]:
-        for f in random.sample(self.data_files, len(self.data_files)) if self.shuffle else self.data_files:
-            for b in data.DataLoader(torch.load(f), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers):
+        data_queue = Queue(maxsize=self.queue_size)
+        loader = threading.Thread(target=self._load, args=(data_queue, ), daemon=True)
+        loader.start()
+
+        while loader.is_alive() or not data_queue.empty():
+            for b in data.DataLoader(data_queue.get(), batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers, drop_last=self.drop_last):
                 yield b
 
-    def __len__(self) -> int:
-        return self.len
+    def _load(self, queue: Queue) -> None:
+        for f in random.sample(self.data_files, len(self.data_files)) if self.shuffle else self.data_files:
+            try:
+                queue.put(torch.load(f))
+            except:
+                pass
 
 class DataModule4CsvAndTsFig(DataModule):
     def __init__(self, csv_split_file: str, vid_dir: str, ts_fig_dir: list[str], param: dict[str, util.Param], result_dir: str, seed: int = 0) -> None:
@@ -250,21 +256,21 @@ class DataModule4CsvAndTsFig(DataModule):
 
     def train_dataloader(self) -> data.DataLoader | _MultiDataLoader:
         if len(self.data_files["train"]) == 1:
-            return data.DataLoader(torch.load(self.data_files["train"][0]), batch_size=self.hparams["batch_size"], shuffle=self.hparams["shuffle"], num_workers=self.hparams["num_workers"])
+            return data.DataLoader(torch.load(self.data_files["train"][0]), batch_size=self.hparams["batch_size"], shuffle=self.hparams["shuffle"], num_workers=self.hparams["num_workers"], drop_last=self.hparams["drop_last"])
         else:
-            return _MultiDataLoader(self.hparams["batch_size"], self.hparams["shuffle"], self.hparams["num_workers"], self.data_files["train"])
+            return _MultiDataLoader(self.hparams["batch_size"], self.hparams["drop_last"], self.hparams["shuffle"], self.hparams["num_workers"], self.data_files["train"], 1)
 
     def val_dataloader(self) -> data.DataLoader | _MultiDataLoader:
         if len(self.data_files["validate"]) == 1:
             return data.DataLoader(torch.load(self.data_files["validate"][0]), batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
         else:
-            return _MultiDataLoader(self.hparams["batch_size"], False, self.hparams["num_workers"], self.data_files["validate"])
+            return _MultiDataLoader(self.hparams["batch_size"], False, False, self.hparams["num_workers"], self.data_files["validate"], 1)
 
     def test_dataloader(self) -> data.DataLoader | _MultiDataLoader:
         if len(self.data_files["test"]) == 1:
             return data.DataLoader(torch.load(self.data_files["test"][0]), batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
         else:
-            return _MultiDataLoader(self.hparams["batch_size"], False, self.hparams["num_workers"], self.data_files["test"])
+            return _MultiDataLoader(self.hparams["batch_size"], False, False, self.hparams["num_workers"], self.data_files["test"], 1)
 
     def get_breakdown(self, mode: Literal["train", "validate", "test"]) -> np.ndarray:
         breakdown = np.zeros(10, dtype=np.int32)
