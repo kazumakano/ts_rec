@@ -174,7 +174,7 @@ class DataModule(pl.LightningDataModule):
                 self.dataset["predict"] = VidDataset(self.predict_files)
 
     def train_dataloader(self) -> data.DataLoader:
-        return data.DataLoader(self.dataset["train"], batch_size=self.hparams["batch_size"], shuffle=self.hparams["shuffle"], num_workers=self.hparams["num_workers"])
+        return data.DataLoader(self.dataset["train"], batch_size=self.hparams["batch_size"], shuffle=self.hparams["shuffle"], num_workers=self.hparams["num_workers"], drop_last=self.hparams["drop_last"])
 
     def val_dataloader(self) -> data.DataLoader:
         return data.DataLoader(self.dataset["validate"], batch_size=self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
