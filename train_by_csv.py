@@ -26,11 +26,9 @@ def train(csv_split_file: str, gpu_id: int, param: dict[str, util.Param] | str, 
     datamodule = DataModule4CsvAndTsFig(csv_split_file, vid_dir, ts_fig_dir, param, trainer.log_dir)
 
     if ckpt_file is None:
-        datamodule.setup("fit")
-        breakdown = datamodule.get_breakdown("train")
-        model = CNN3(param, torch.from_numpy(breakdown.sum() / breakdown).to(dtype=torch.float32))
+        model = CNN3(param)
         trainer.fit(model, datamodule=datamodule)
-        model.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0], loss_weight=torch.empty(10, dtype=torch.float32))
+        model.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0])
     else:
         model = CNN3.load_from_checkpoint(ckpt_file, param=param, loss_weight=torch.empty(10, dtype=torch.float32))
 
