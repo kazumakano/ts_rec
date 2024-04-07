@@ -25,15 +25,15 @@ MAX_FRM_NUM : int
 """
 
 GPU = 1
-GPU_PER_TASK = 0.2
-MAX_FRM_NUM = 128
+GPU_PER_TASK = 1
+MAX_FRM_NUM = 1024
 
 @ray.remote(num_gpus=GPU_PER_TASK)
 def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    model = CNN34ManyFrms.load_from_checkpoint(ckpt_file, map_location=torch.device("cuda", 0), param=param, loss_weight=torch.empty(10, dtype=torch.float32))
+    model = CNN34ManyFrms.load_from_checkpoint(ckpt_file, map_location=torch.device("cuda", 0), loss_weight=torch.empty(10, dtype=torch.float32))
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
