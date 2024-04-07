@@ -18,7 +18,7 @@ class _BaseModule(pl.LightningModule):
             self.save_hyperparameters(param)
 
     def configure_optimizers(self) -> optim.SGD:
-        return optim.SGD(self.parameters(), lr=self.hparams["learning_rate"])
+        return optim.Adam(self.parameters(), lr=self.hparams["learning_rate"])
 
     def training_step(self, batch: list[torch.Tensor]) -> torch.Tensor:
         estim = self(batch[0])
