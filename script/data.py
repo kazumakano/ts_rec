@@ -270,13 +270,6 @@ class DataModule4CsvAndTsFig(pl.LightningDataModule):
         else:
             return _MultiDataLoader(self.hparams["batch_size"], False, False, self.hparams["num_workers"], self.data_files["test"], 1)
 
-    def get_breakdown(self, mode: Literal["train", "validate", "test"]) -> np.ndarray:
-        breakdown = np.zeros(10, dtype=np.int32)
-        for f in self.data_files[mode]:
-            breakdown += torch.load(f).breakdown
-
-        return breakdown
-
     def _load_and_save(self, mode: Literal["train", "validate", "test"]) -> None:
         if not path.exists(self.result_dir):
             makedirs(self.result_dir)
