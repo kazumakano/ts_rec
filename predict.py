@@ -21,7 +21,11 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
         param = util.load_param(param)
     result_dir = util.get_result_dir(result_dir_name)
 
-    model = CNN3.load_from_checkpoint(ckpt_file, map_location=torch.device("cuda", gpu_id), loss_weight=torch.empty(10, dtype=torch.float32))
+    model = CNN3.load_from_checkpoint(
+        ckpt_file,
+        map_location=torch.device("cuda", gpu_id),
+        loss_weight=torch.empty(10, dtype=torch.float32) if param["enable_loss_weight"] else None
+    )
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[gpu_id],

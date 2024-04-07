@@ -26,6 +26,8 @@ def _try(param: dict[str, util.Param]) -> None:
     torch.set_float32_matmul_precision("high")
     # tune_utils.wait_for_gpu()
 
+    param["enable_loss_weight"] = True
+
     if CNN3.is_valid_ks(param):
         datamodule = DataModule.load(path.join(tune.get_trial_dir(), "../"))
         trainer = pl.Trainer(
@@ -38,7 +40,7 @@ def _try(param: dict[str, util.Param]) -> None:
             enable_model_summary=False
         )
 
-        trainer.fit(CNN3(param, torch.from_numpy(len(datamodule.dataset["train"].label) / datamodule.dataset["train"].breakdown).to(dtype=torch.float32)), datamodule=datamodule)
+        trainer.fit(CNN3(param, datamodule.dataset["train"].calc_loss_weight()), datamodule=datamodule)
 
 def tune_params(param_list_file: str, ts_fig_dir: list[str], bot_conf_file: Optional[str] = None, gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
     if gpu_ids is not None:

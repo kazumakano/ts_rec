@@ -15,6 +15,7 @@ def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: list[str]
 
     if isinstance(param, str):
         param = util.load_param(param)
+    param["enable_loss_weight"] = True
 
     datamodule = DataModule(param, ts_fig_dir)
     trainer = pl.Trainer(

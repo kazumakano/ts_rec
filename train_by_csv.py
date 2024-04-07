@@ -15,6 +15,7 @@ def train(csv_split_file: str, gpu_id: int, param: dict[str, util.Param] | str, 
 
     if isinstance(param, str):
         param = util.load_param(param)
+    param["enable_loss_weight"] = False
 
     trainer = pl.Trainer(
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),

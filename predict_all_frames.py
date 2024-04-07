@@ -33,7 +33,11 @@ def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: s
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    model = CNN34ManyFrms.load_from_checkpoint(ckpt_file, map_location=torch.device("cuda", 0), loss_weight=torch.empty(10, dtype=torch.float32))
+    model = CNN34ManyFrms.load_from_checkpoint(
+        ckpt_file,
+        map_location=torch.device("cuda", 0),
+        loss_weight=torch.empty(10, dtype=torch.float32) if param["enable_loss_weight"] else None
+    )
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=1,
