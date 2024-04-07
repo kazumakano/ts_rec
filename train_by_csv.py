@@ -30,7 +30,7 @@ def train(csv_split_file: str, gpu_id: int, param: dict[str, util.Param] | str, 
         trainer.fit(model, datamodule=datamodule)
         model = CNN3.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0])
     else:
-        model = CNN3.load_from_checkpoint(ckpt_file, loss_weight=torch.empty(10, dtype=torch.float32))
+        model = CNN3.load_from_checkpoint(ckpt_file)
 
     trainer.test(model=model, datamodule=datamodule)
 
