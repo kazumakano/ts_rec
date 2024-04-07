@@ -223,14 +223,12 @@ class _MultiDataLoader:
 
     def _load_asyncly(self, queue: Queue) -> None:
         for f in random.sample(self.data_files, len(self.data_files)) if self.shuffle else self.data_files:
-            try:
-                queue.put(torch.load(f))
-            except:
-                pass
+            queue.put(torch.load(f))
 
-class DataModule4CsvAndTsFig(DataModule):
+class DataModule4CsvAndTsFig(pl.LightningDataModule):
     def __init__(self, csv_split_file: str, vid_dir: str, ts_fig_dir: list[str], param: dict[str, util.Param], result_dir: str, seed: int = 0) -> None:
-        pl.LightningDataModule.__init__(self)
+        random.seed(a=seed)
+        super().__init__()
 
         self.data_files: dict[str, list[str]] = {}
         self.save_hyperparameters(param)
