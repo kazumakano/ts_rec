@@ -19,7 +19,7 @@ def train(csv_split_file: str, gpu_id: int, param: dict[str, util.Param] | str, 
 
     trainer = pl.Trainer(
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
-        callbacks=ModelCheckpoint(monitor="validation_loss", save_last=True),
+        callbacks=ModelCheckpoint(monitor="validation_loss", save_last=True, save_top_k=3),
         devices=[gpu_id],
         max_epochs=param["epoch"],
         accelerator="gpu"
