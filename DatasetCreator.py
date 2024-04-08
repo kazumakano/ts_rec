@@ -7,8 +7,8 @@ import numpy as np
 import streamlit as st
 import script.utility as util
 
-SRC_ROOT_DIR = "/mnt/qnap105/"
-TGT_ROOT_DIR = "/mnt/bigdata/01_projects/ts_fig_dataset/"
+SRC_DIR = "/mnt/qnap105/"
+TGT_DIR = "/mnt/bigdata/01_projects/ts_fig_dataset/"
 
 def _back_states() -> None:
     st.session_state["digit"] -= 1
@@ -28,14 +28,14 @@ def _reset_states() -> None:
 
 def _check_exist(cam_name: str, vid_date: date) -> None:
     while True:
-        if len(glob(path.join(TGT_ROOT_DIR, f"*_{vid_date.isoformat()}_{cam_name}_{st.session_state['vid_idx']:02d}_{st.session_state['digit']}_[0-9].tif"))) > 0:
+        if len(glob(path.join(TGT_DIR, f"*_{vid_date.isoformat()}_{cam_name}_{st.session_state['vid_idx']:02d}_{st.session_state['digit']}_[0-9].tif"))) > 0:
             _next_states()
         else:
             break
 
 def _save_ts_fig_img(cam_name: str, img: np.ndarray, label: int, usr_name: str, vid_date: date) -> None:
     file_name = f"{usr_name}_{vid_date.isoformat()}_{cam_name}_{st.session_state['vid_idx']:02d}_{st.session_state['digit']}_{label}.tif"
-    if cv2.imwrite(path.join(TGT_ROOT_DIR, file_name), img):
+    if cv2.imwrite(path.join(TGT_DIR, file_name), img):
         st.success(f"saved to {file_name}")
     else:
         st.error("failed to save image")
@@ -48,7 +48,7 @@ def _label_btn(cam_name: str, img: np.ndarray, label: int, usr_name: str, vid_da
 def _undo(cam_name: str, vid_date: date) -> None:
     _back_states()
 
-    files = glob(path.join(TGT_ROOT_DIR, f"*_{vid_date.isoformat()}_{cam_name}_{st.session_state['vid_idx']:02d}_{st.session_state['digit']}_[0-9].tif"))
+    files = glob(path.join(TGT_DIR, f"*_{vid_date.isoformat()}_{cam_name}_{st.session_state['vid_idx']:02d}_{st.session_state['digit']}_[0-9].tif"))
     if len(files) > 0:
         os.remove(files[0])
         st.info(f"deleted {path.basename(files[0])}")
@@ -76,7 +76,7 @@ def render() -> None:
 
     if usr_name != "":
         vid_date = st.date_input("choose date", on_change=_reset_states)
-        cam_dir = st.selectbox("choose camera", [d for d in sorted(iglob(path.join(SRC_ROOT_DIR, str(vid_date.year), vid_date.isoformat(), "camera*")))], format_func=lambda dir: path.basename(dir)[6:], on_change=_reset_states)
+        cam_dir = st.selectbox("choose camera", [d for d in sorted(iglob(path.join(SRC_DIR, str(vid_date.year), vid_date.isoformat(), "camera*")))], format_func=lambda dir: path.basename(dir)[6:], on_change=_reset_states)
 
         if cam_dir is not None:
             cam_name = path.basename(cam_dir)[6:]
