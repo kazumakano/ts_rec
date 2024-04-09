@@ -1,14 +1,15 @@
 import os.path as path
 from glob import glob
 import torch
+import script.utility as util
 from script.model import CNN3
 
 
 def compile_model(result_dir: str, ver: int = 0) -> None:
     CNN3.load_from_checkpoint(
-        glob(path.join(result_dir, f"version_{ver}/", "checkpoints/", "epoch=*-step=*.ckpt"))[0],
-        loss_weight=torch.empty(10, dtype=torch.float32)
-    ).to(device=torch.device("cuda", 0)).to_torchscript(file_path=path.join(result_dir, f"version_{ver}/", "model.pt"))
+        glob(path.join(result_dir, f"version_{ver}/checkpoints/epoch=*-step=*.ckpt"))[0],
+        loss_weight=torch.empty(10, dtype=torch.float32) if util.load_param(path.join(result_dir, f"version_{ver}/hparams.yaml"))["enable_loss_weight"] else None
+    ).to(device=torch.device("cuda", 0)).to_torchscript(file_path=path.join(result_dir, f"version_{ver}/model.pt"))
 
 if __name__ == "__main__":
     import argparse
