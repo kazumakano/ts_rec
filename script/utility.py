@@ -338,7 +338,7 @@ def read_head_n_frms(file: str, n: int, skip_one_by_one: bool = False, start_idx
     cap = cv2.VideoCapture(filename=file)
     if skip_one_by_one:
         for _ in range(start_idx):
-            ret, frm = cap.read()
+            cap.read()
     else:
         cap.set(cv2.CAP_PROP_POS_FRAMES, start_idx)
 
