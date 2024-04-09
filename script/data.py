@@ -23,7 +23,7 @@ class CsvDataset(data.Dataset):
 
         df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog", "is_smudged"))
         df = df.loc[df.loc[:, "vid_idx"] == vid_idx]
-        vid_files = glob(path.join(vid_dir, f"camera{df.iloc[0, 'cam']}/video_??-??-??_{vid_idx:02d}.mp4"))
+        vid_files = glob(path.join(vid_dir, f"camera{df.iloc[0]['cam']}/video_??-??-??_{vid_idx:02d}.mp4"))
         if len(vid_files) > 1:
             raise Exception("video index must be unique")
         cap = cv2.VideoCapture(filename=vid_files[0])
