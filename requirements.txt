@@ -1,5 +1,4 @@
 async-timeout
-Flask
 ipykernel
 matplotlib
 numpy
