@@ -351,17 +351,6 @@ def read_head_n_frms(file: str, n: int, skip_one_by_one: bool = False, start_idx
 
     return np.empty((0, int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8) if len(frms) == 0 else np.stack(frms)
 
-def slice_around_inconsis(df: pd.DataFrame) -> list[pd.DataFrame]:
-    slices = []
-    for i, r in df.iterrows():
-        if pd.isna(r["is_inconsis"]) and i + 1 < len(df) and df.loc[i + 1, "is_inconsis"] == "inconsis":
-            j = 2
-            while i + j < len(df) and df.loc[i + j, "is_inconsis"] == "inconsis":
-                j += 1
-            slices.append(df.loc[i:i + j - 1])    # include end row
-
-    return slices
-
 def str2time(ts: str) -> time:
     return datetime.strptime(ts, "%H:%M:%S").time()
 
