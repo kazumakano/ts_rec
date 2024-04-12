@@ -1,6 +1,7 @@
+import math
 import os.path as path
 import pickle
-from typing import Optional
+from typing import Literal, Optional
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -125,8 +126,8 @@ class CNN2(_BaseModule):
         self.fc = nn.Linear((24 - param["conv_ks_1"] - param["conv_ks_2"]) * (19 - param["conv_ks_1"] - param["conv_ks_2"]) * param["conv_ch_2"], 10)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
-        hidden = F.dropout(F.relu(self.conv_1(input)), training=self.training)
-        hidden = F.dropout(F.relu(self.conv_2(hidden)), training=self.training)
+        hidden = F.dropout(F.relu(self.conv_1(input)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_2(hidden)), p=self.hparams["conv_dp"], training=self.training)
         output = self.fc(hidden.flatten(start_dim=1))
 
         return output
@@ -145,9 +146,9 @@ class CNN3(_BaseModule):
         self.fc = nn.Linear((25 - param["conv_ks_1"] - param["conv_ks_2"] - param["conv_ks_3"]) * (20 - param["conv_ks_1"] - param["conv_ks_2"] - param["conv_ks_3"]) * param["conv_ch_3"], 10)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
-        hidden = F.dropout(F.relu(self.conv_1(input)), training=self.training)
-        hidden = F.dropout(F.relu(self.conv_2(hidden)), training=self.training)
-        hidden = F.dropout(F.relu(self.conv_3(hidden)), training=self.training)
+        hidden = F.dropout(F.relu(self.conv_1(input)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_2(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_3(hidden)), p=self.hparams["conv_dp"], training=self.training)
         output = self.fc(hidden.flatten(start_dim=1))
 
         return output
@@ -179,23 +180,40 @@ class VGG(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight, param)
 
+        fc_ch = round(math.sqrt(500 * param["conv_ch_6"]))
+
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], 3)
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], 3)
         self.conv_3 = nn.Conv2d(param["conv_ch_2"], param["conv_ch_3"], 3)
         self.conv_4 = nn.Conv2d(param["conv_ch_3"], param["conv_ch_4"], 3)
         self.conv_5 = nn.Conv2d(param["conv_ch_4"], param["conv_ch_5"], 3)
-        self.fc = nn.Linear(18 * param["conv_ch_5"], 10)
+        self.conv_6 = nn.Conv2d(param["conv_ch_5"], param["conv_ch_6"], 3)
+        self.fc_1 = nn.Linear(50 * param["conv_ch_6"], fc_ch)
+        self.fc_2 = nn.Linear(fc_ch, 10)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
-        hidden = F.relu(self.conv_1(input))
-        hidden = F.relu(self.conv_2(hidden))
-        hidden = F.relu(self.conv_3(hidden))
-        hidden = F.relu(self.conv_4(hidden))
-        hidden = F.relu(self.conv_5(hidden))
-        hidden = F.dropout(F.max_pool2d(hidden, 2), training=self.training)
-        output = self.fc(hidden.flatten(start_dim=1))
+        hidden = F.dropout(F.relu(self.conv_1(input)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_2(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_3(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_4(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_5(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_6(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.relu(self.fc_1(hidden.flatten(start_dim=1)))
+        output = self.fc_2(hidden)
 
         return output
 
+def get_model_cls(name: Literal["cnn3", "vgg"]) -> type[CNN3 | VGG]:
+    match name:
+        case "cnn3":
+            return CNN3
+        case "vgg":
+            return VGG
+        case _:
+            raise Exception(f"unknown model {name} was specified")
+
 class CNN34ManyFrms(_BaseModule4ManyFrms, CNN3):
+    ...
+
+class VGG4ManyFrms(_BaseModule4ManyFrms, VGG):
     ...
