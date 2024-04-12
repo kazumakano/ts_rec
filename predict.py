@@ -8,9 +8,9 @@ import torch
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import script.model as M
 import script.utility as util
 from script.data import VidDataset
-from script.model import CNN3
 
 
 def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid_dir: str, ex_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
@@ -21,7 +21,7 @@ def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid
         param = util.load_param(param)
     result_dir = util.get_result_dir(result_dir_name)
 
-    model = CNN3.load_from_checkpoint(
+    model = M.get_model_cls(param["arch"]).load_from_checkpoint(
         ckpt_file,
         map_location=torch.device("cuda", gpu_id),
         loss_weight=torch.empty(10, dtype=torch.float32) if param["enable_loss_weight"] else None

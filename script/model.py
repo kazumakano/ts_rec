@@ -203,17 +203,17 @@ class VGG(_BaseModule):
 
         return output
 
-def get_model_cls(name: Literal["cnn3", "vgg"]) -> type[CNN3 | VGG]:
-    match name:
-        case "cnn3":
-            return CNN3
-        case "vgg":
-            return VGG
-        case _:
-            raise Exception(f"unknown model {name} was specified")
-
 class CNN34ManyFrms(_BaseModule4ManyFrms, CNN3):
     ...
 
 class VGG4ManyFrms(_BaseModule4ManyFrms, VGG):
     ...
+
+def get_model_cls(name: Literal["cnn3", "vgg"], apply_many_frms: bool = False) -> type[CNN3 | CNN34ManyFrms | VGG | VGG4ManyFrms]:
+    match name:
+        case "cnn3":
+            return CNN34ManyFrms if apply_many_frms else CNN3
+        case "vgg":
+            return VGG4ManyFrms if apply_many_frms else VGG
+        case _:
+            raise Exception(f"unknown model {name} was specified")

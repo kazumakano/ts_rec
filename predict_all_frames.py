@@ -10,9 +10,9 @@ import torch
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import script.model as M
 import script.utility as util
 from script.data import VidDataset4ManyFrms
-from script.model import CNN34ManyFrms
 
 """
 GPU : float
@@ -33,7 +33,7 @@ def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: s
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    model = CNN34ManyFrms.load_from_checkpoint(
+    model = M.get_model_cls(param["arch"], True).load_from_checkpoint(
         ckpt_file,
         map_location=torch.device("cuda", 0),
         loss_weight=torch.empty(10, dtype=torch.float32) if param["enable_loss_weight"] else None
