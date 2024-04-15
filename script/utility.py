@@ -253,9 +253,12 @@ def load_test_result(result_dir: str, ver: int = 0) -> tuple[tuple[np.ndarray, n
     with open(path.join(result_dir, f"version_{ver}/", "test_outputs.pkl"), mode="rb") as f:
         return pickle.load(f), load_param(path.join(result_dir, f"version_{ver}/", "hparams.yaml"))
 
-def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
+def read_date(result_dir: str) -> date:
     with open(path.join(result_dir, "date.txt")) as f:
-        true_date = datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
+        return datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
+
+def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
+    true_date = read_date(result_dir)
 
     dirs = glob(path.join(result_dir, "*/"))
     fig, axes = plt.subplots(nrows=math.ceil(len(dirs) / 2), ncols=2, figsize=(16, 4 * math.ceil(len(dirs) / 2)))
@@ -275,8 +278,7 @@ def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
     fig.show()
 
 def plot_predict_results_by_cam(cam_name: str, result_dir: str, ver: int = 0) -> None:
-    with open(path.join(result_dir, "date.txt")) as f:
-        true_date = datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
+    true_date = read_date(result_dir)
 
     files = glob(path.join(result_dir, cam_name, f"??-??-??_*/version_{ver}/predict_results.csv"))
     fig, axes = plt.subplots(nrows=math.ceil(len(files) / 2), ncols=2, figsize=(16, 4 * math.ceil(len(files) / 2)))
