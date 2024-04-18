@@ -73,7 +73,7 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
                     if len(pid_queue) >= GPU // GPU_PER_TASK:
                         pid_queue.remove(ray.wait(pid_queue, num_returns=1)[0][0])
-                    pid_queue.append(_predict_by_file.remote(path.abspath(ckpt_file), param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), f))
+                    pid_queue.append(_predict_by_file.remote(path.abspath(ckpt_file), param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), path.abspath(f)))
 
     ray.get(pid_queue)
 
