@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 import ray
 import torch
 from pytorch_lightning.loggers import TensorBoardLogger
+from torch import cuda
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import script.model as M
@@ -24,7 +25,6 @@ MAX_FRM_NUM : int
     Consider to reduce this if out of memory.
 """
 
-GPU = 1
 GPU_PER_TASK = 1
 MAX_FRM_NUM = 1024
 
@@ -71,7 +71,7 @@ def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir
         if exclude is None or exclude["camera"] is None or cam_name not in exclude["camera"]:
             for f in tqdm(sorted(iglob(path.join(d, "video_??-??-??_*.mp4"))), desc=f"recognizing camera {cam_name}"):
                 if exclude is None or exclude["index"] is None or int(f[-6:-4]) not in exclude["index"]:
-                    if len(pid_queue) >= GPU // GPU_PER_TASK:
+                    if len(pid_queue) >= cuda.device_count() // GPU_PER_TASK:
                         pid_queue.remove(ray.wait(pid_queue, num_returns=1)[0][0])
                     pid_queue.append(_predict_by_file.remote(path.abspath(ckpt_file), param, path.join(result_dir, cam_name, path.splitext(path.basename(f))[0][6:]), path.abspath(f)))
 
