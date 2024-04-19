@@ -16,8 +16,6 @@ import script.utility as util
 from script.data import VidDataset4ManyFrms
 
 """
-GPU : float
-    Total number of gpus.
 GPU_PER_TASK : float
     Number of gpus per one task.
 MAX_FRM_NUM : int
@@ -26,7 +24,7 @@ MAX_FRM_NUM : int
 """
 
 GPU_PER_TASK = 1
-MAX_FRM_NUM = 1024
+MAX_FRM_NUM = 4096
 
 @ray.remote(num_gpus=GPU_PER_TASK)
 def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
