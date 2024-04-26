@@ -18,7 +18,7 @@ from . import utility as util
 
 
 class CsvDataset(data.Dataset):
-    def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 64, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 1) -> None:
+    def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 4, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 1) -> None:
         self.aug_num = aug_num
 
         df = pd.read_csv(csv_file, usecols=("cam", "vid_idx", "recog", "is_smudged"))
