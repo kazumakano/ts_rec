@@ -5,8 +5,8 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
+import script.model as M
 import script.utility as util
-from script import model as M
 from script.data import DataModule4CsvAndTsFig
 
 

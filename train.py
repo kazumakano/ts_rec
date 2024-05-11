@@ -5,9 +5,9 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
+import script.model as M
 import script.utility as util
 from script.data import DataModule
-from script.model import CNN3
 
 
 def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: list[str], ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
@@ -16,6 +16,7 @@ def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: list[str]
     if isinstance(param, str):
         param = util.load_param(param)
     param["enable_loss_weight"] = True
+    model_cls = M.get_model_cls(param["arch"])
 
     datamodule = DataModule(param, ts_fig_dir)
     trainer = pl.Trainer(
@@ -28,11 +29,11 @@ def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: list[str]
 
     if ckpt_file is None:
         datamodule.setup("fit")
-        model = CNN3(param, datamodule.dataset["train"].calc_loss_weight())
+        model = model_cls(param, datamodule.dataset["train"].calc_loss_weight())
         trainer.fit(model, datamodule=datamodule)
-        model = CNN3.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0], loss_weight=torch.empty(10, dtype=torch.float32))
+        model = model_cls.load_from_checkpoint(glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0], loss_weight=torch.empty(10, dtype=torch.float32))
     else:
-        model = CNN3.load_from_checkpoint(ckpt_file, loss_weight=torch.empty(10, dtype=torch.float32))
+        model = model_cls.load_from_checkpoint(ckpt_file, loss_weight=torch.empty(10, dtype=torch.float32))
 
     trainer.test(model=model, datamodule=datamodule)
 
