@@ -1,12 +1,15 @@
-batch_size: 1024
-epoch: 2000
-learning_rate: 0.002
+batch_size: 8192
+drop_last: True
+epoch: 50
+learning_rate: 0.00001
 num_workers: 4
 shuffle: True
 
+arch: cnn3
 conv_ch_1: 64
 conv_ch_2: 64
-conv_ch_3: 32
+conv_ch_3: 64
+conv_dp: 0.5
 conv_ks_1: 7
 conv_ks_2: 5
 conv_ks_3: 3
