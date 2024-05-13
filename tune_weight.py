@@ -16,7 +16,6 @@ def tune_weight(ckpt_file: str, gpu_id: int, param_file: str, ts_fig_dir: list[s
     model_cls = M.get_model_cls(param["arch"])
 
     datamodule = DataModule(param, ts_fig_dir, prop=(1, 0, 0))
-    datamodule.val_files = datamodule.train_files
     datamodule.setup("fit")
 
     if torch.load(ckpt_file)["hyper_parameters"]["enable_loss_weight"]:
