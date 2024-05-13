@@ -24,7 +24,7 @@ MAX_FRM_NUM : int
 """
 
 GPU_PER_TASK = 1
-MAX_FRM_NUM = 4096
+MAX_FRM_NUM = 1024
 
 @ray.remote(num_gpus=GPU_PER_TASK)
 def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
@@ -51,7 +51,7 @@ def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: s
         trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=param["batch_size"], num_workers=param["num_workers"]))
         dataset_idx += 1
 
-def predict_all_frms(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir: str, ex_file: Optional[str] = None, gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
+def predict(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir: str, ex_file: Optional[str] = None, gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
     if gpu_ids is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
     ray.init()
@@ -93,10 +93,10 @@ if __name__ == "__main__":
         parser.add_argument("-p", "--param_file", required=True, help="specify parameter file", metavar="PATH_TO_PARAM_FILE")
         args = parser.parse_args()
 
-        predict_all_frms(args.ckpt_file, args.param_file, args.vid_dir, args.ex_file, args.gpu_ids, args.result_dir_name)
+        predict(args.ckpt_file, args.param_file, args.vid_dir, args.ex_file, args.gpu_ids, args.result_dir_name)
 
     else:
         args = parser.parse_args()
         lines = sys.stdin.readlines()
 
-        predict_all_frms(lines[3].rstrip(), json.loads(lines[1]), args.vid_dir, args.ex_file, args.gpu_ids, args.result_dir_name)
+        predict(lines[3].rstrip(), json.loads(lines[1]), args.vid_dir, args.ex_file, args.gpu_ids, args.result_dir_name)
