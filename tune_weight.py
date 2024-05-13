@@ -26,7 +26,7 @@ def tune_weight(ckpt_file: str, gpu_id: int, param_file: str, ts_fig_dir: list[s
 
     pl.Trainer(
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
-        callbacks=ModelCheckpoint(monitor="validation_loss", save_top_k=-1, every_n_epochs=param["epoch"] // 10),
+        callbacks=ModelCheckpoint(save_top_k=-1, every_n_epochs=param["epoch"] // 10),
         devices=[gpu_id],
         max_epochs=param["epoch"],
         accelerator="gpu"
