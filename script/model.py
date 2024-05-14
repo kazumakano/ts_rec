@@ -2,11 +2,14 @@ import math
 import os.path as path
 import pickle
 from typing import Literal, Optional
+import easyocr
 import numpy as np
 import pytorch_lightning as pl
 import torch
+from easyocr.model.vgg_model import VGG_FeatureExtractor
 from torch import nn, optim
 from torch.nn import functional as F
+from torchvision.transforms import functional as TF
 from . import utility as util
 
 
@@ -157,6 +160,28 @@ class CNN3(_BaseModule):
     def is_valid_ks(param: dict[str | util.Param]) -> bool:
         return param["conv_ks_1"] + param["conv_ks_2"] + param["conv_ks_3"] < 20
 
+class EasyOCR(_BaseModule):
+    def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
+        super().__init__(loss_weight, param)
+
+        self.extractor: VGG_FeatureExtractor = easyocr.Reader(["en"]).recognizer.module.FeatureExtraction
+        self.predictor = nn.Sequential(
+            nn.Linear(1792, 134),
+            nn.ReLU(),
+            nn.Linear(134, 10)
+        )
+
+        if param["freeze"]:
+            for p in self.extractor.parameters():
+                p.requires_grad = False
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
+        input = TF.resize(TF.rgb_to_grayscale(input), (self.hparams["scale"] * input.shape[2], self.hparams["scale"] * input.shape[3]), antialias=True)
+        hidden = F.adaptive_avg_pool2d(self.extractor(input).permute(0, 3, 1, 2), (256, 1))
+        output = self.predictor(hidden.flatten(start_dim=1))
+
+        return output
+
 class FullNet(_BaseModule):
     def __init__(self, loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight, None)
@@ -206,13 +231,18 @@ class VGG(_BaseModule):
 class CNN34ManyFrms(_BaseModule4ManyFrms, CNN3):
     ...
 
+class EasyOCR4ManyFrms(_BaseModule4ManyFrms, EasyOCR):
+    ...
+
 class VGG4ManyFrms(_BaseModule4ManyFrms, VGG):
     ...
 
-def get_model_cls(name: Literal["cnn3", "vgg"], apply_many_frms: bool = False) -> type[CNN3 | CNN34ManyFrms | VGG | VGG4ManyFrms]:
+def get_model_cls(name: Literal["cnn3", "easyocr", "vgg"], apply_many_frms: bool = False) -> type[CNN3 | CNN34ManyFrms | VGG | VGG4ManyFrms]:
     match name:
         case "cnn3":
             return CNN34ManyFrms if apply_many_frms else CNN3
+        case "easyocr":
+            return EasyOCR4ManyFrms if apply_many_frms else EasyOCR
         case "vgg":
             return VGG4ManyFrms if apply_many_frms else VGG
         case _:

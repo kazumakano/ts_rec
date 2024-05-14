@@ -1,4 +1,5 @@
 async-timeout
+easyocr
 ipykernel
 matplotlib
 numpy
