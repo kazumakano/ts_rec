@@ -205,7 +205,7 @@ class VGG(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight, param)
 
-        fc_ch = round(math.sqrt(500 * param["conv_ch_6"]))
+        fc_ch = round(math.sqrt(60 * param["conv_ch_8"]))
 
         self.conv_1 = nn.Conv2d(3, param["conv_ch_1"], 3)
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], 3)
@@ -213,7 +213,9 @@ class VGG(_BaseModule):
         self.conv_4 = nn.Conv2d(param["conv_ch_3"], param["conv_ch_4"], 3)
         self.conv_5 = nn.Conv2d(param["conv_ch_4"], param["conv_ch_5"], 3)
         self.conv_6 = nn.Conv2d(param["conv_ch_5"], param["conv_ch_6"], 3)
-        self.fc_1 = nn.Linear(50 * param["conv_ch_6"], fc_ch)
+        self.conv_7 = nn.Conv2d(param["conv_ch_6"], param["conv_ch_7"], 3)
+        self.conv_8 = nn.Conv2d(param["conv_ch_7"], param["conv_ch_8"], 3)
+        self.fc_1 = nn.Linear(6 * param["conv_ch_8"], fc_ch)
         self.fc_2 = nn.Linear(fc_ch, 10)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
@@ -223,6 +225,8 @@ class VGG(_BaseModule):
         hidden = F.dropout(F.relu(self.conv_4(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_5(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_6(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_7(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.conv_8(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.relu(self.fc_1(hidden.flatten(start_dim=1)))
         output = self.fc_2(hidden)
 
