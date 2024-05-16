@@ -211,6 +211,7 @@ class VGG(_BaseModule):
         self.conv_2 = nn.Conv2d(param["conv_ch_1"], param["conv_ch_2"], 3)
         self.conv_3 = nn.Conv2d(param["conv_ch_2"], param["conv_ch_3"], 3)
         self.conv_4 = nn.Conv2d(param["conv_ch_3"], param["conv_ch_4"], 3)
+        self.bn = nn.BatchNorm2d(param["conv_ch_4"])
         self.conv_5 = nn.Conv2d(param["conv_ch_4"], param["conv_ch_5"], 3)
         self.conv_6 = nn.Conv2d(param["conv_ch_5"], param["conv_ch_6"], 3)
         self.conv_7 = nn.Conv2d(param["conv_ch_6"], param["conv_ch_7"], 3)
@@ -222,7 +223,7 @@ class VGG(_BaseModule):
         hidden = F.dropout(F.relu(self.conv_1(input)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_2(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_3(hidden)), p=self.hparams["conv_dp"], training=self.training)
-        hidden = F.dropout(F.relu(self.conv_4(hidden)), p=self.hparams["conv_dp"], training=self.training)
+        hidden = F.dropout(F.relu(self.bn(self.conv_4(hidden))), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_5(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_6(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_7(hidden)), p=self.hparams["conv_dp"], training=self.training)
@@ -241,7 +242,7 @@ class EasyOCR4ManyFrms(_BaseModule4ManyFrms, EasyOCR):
 class VGG4ManyFrms(_BaseModule4ManyFrms, VGG):
     ...
 
-def get_model_cls(name: Literal["cnn3", "easyocr", "vgg"], apply_many_frms: bool = False) -> type[CNN3 | CNN34ManyFrms | VGG | VGG4ManyFrms]:
+def get_model_cls(name: Literal["cnn3", "easyocr", "vgg"], apply_many_frms: bool = False) -> type[CNN3 | CNN34ManyFrms | EasyOCR | EasyOCR4ManyFrms | VGG | VGG4ManyFrms]:
     match name:
         case "cnn3":
             return CNN34ManyFrms if apply_many_frms else CNN3
