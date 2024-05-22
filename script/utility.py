@@ -246,10 +246,14 @@ def get_result_dir(dir_name: str | None) -> str:
 
     return path.join(path.dirname(__file__), "../result/", dir_name)
 
-def load_param(file_or_stream: str | io.TextIOWrapper) -> dict[str, Param | list[Param] | list[str]]:
+def load_param(file_or_stream: str | io.StringIO) -> dict[str, Param | list[Param] | list[str]]:
     if isinstance(file_or_stream, str):
-        file_or_stream = open(file_or_stream)
-    return yaml.safe_load(file_or_stream)
+        with open(file_or_stream) as f:
+            return yaml.safe_load(f)
+    elif isinstance(file_or_stream, io.StringIO):
+        return yaml.safe_load(file_or_stream)
+    else:
+        raise Exception(f"only 'str' or 'StringIO' is supported but {type(file_or_stream)} was given")
 
 def load_test_result(result_dir: str, ver: int = 0) -> tuple[tuple[np.ndarray, np.ndarray, np.ndarray], dict[str, Param]]:
     with open(path.join(result_dir, f"version_{ver}/", "test_outputs.pkl"), mode="rb") as f:
