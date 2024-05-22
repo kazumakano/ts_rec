@@ -290,3 +290,44 @@ class DataModule4CsvAndTsFig(pl.LightningDataModule):
         data_file = path.join(self.result_dir, f"{mode}_data_{i}.pt")
         torch.save(dataset, data_file)
         self.data_files[mode].append(data_file)
+
+class _DataLoaderCombiner:
+    def __init__(self, shuffle: bool, src: data.DataLoader | _MultiDataLoader, tgt: data.DataLoader) -> None:
+        self.shuffle = shuffle
+        self.src, self.tgt = self._use_eternal_loader(src), tgt
+
+    def __iter__(self) -> Generator[list[torch.Tensor], None, None]:
+        for tb in self.tgt:
+            sb = next(self.src)
+            batch = [torch.vstack((sb[0], tb[0])), torch.hstack((sb[1], tb[1]))]
+            if self.shuffle:
+                rand_idxes = torch.randperm(len(batch[1]))
+                batch = [batch[0][rand_idxes], batch[1][rand_idxes]]
+            yield batch
+
+    def __len__(self) -> int:
+        return len(self.tgt)
+
+    @staticmethod
+    def _use_eternal_loader(loader: data.DataLoader | _MultiDataLoader) -> Generator[list[torch.Tensor], None, None]:
+        while True:
+            for b in loader:
+                yield b
+
+class DataModuleCombiner(pl.LightningDataModule):
+    def __init__(self, param: dict[str, util.Param], src: DataModule | DataModule4CsvAndTsFig, tgt: DataModule, seed: int = 0) -> None:
+        random.seed(a=seed)
+        super().__init__()
+
+        self.save_hyperparameters(param)
+        self.src, self.tgt = src, tgt
+
+    def setup(self, stage: str) -> None:
+        self.src.setup(stage)
+        self.tgt.setup(stage)
+
+    def train_dataloader(self) -> _DataLoaderCombiner:
+        return _DataLoaderCombiner(self.hparams["shuffle"], self.src.train_dataloader(), self.tgt.train_dataloader())
+
+    def val_dataloader(self) -> data.DataLoader:
+        return self.tgt.val_dataloader()
