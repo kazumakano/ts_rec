@@ -1,6 +1,8 @@
+import io
 from typing import Optional
 import pytorch_lightning as pl
 import torch
+import yaml
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 import script.model as M
@@ -31,7 +33,14 @@ def tune_weight(ckpt_file: str, gpu_id: int, param_file: str, src_csv_split_file
         max_epochs=param["epoch"],
         accelerator="gpu"
     )
-    trainer.fit(model, datamodule=DataModuleMixer(param, DataModule4CsvAndTsFig(src_csv_split_file, src_vid_dir, src_ts_fig_dir, {**param, "batch_size": round(prop[0] * param["batch_size"])}, trainer.log_dir, (1, 0, 0)), tgt_datamodule))
+    trainer.fit(
+        model,
+        datamodule=DataModuleMixer(
+            param,
+            DataModule4CsvAndTsFig(io.StringIO(initial_value=yaml.safe_dump({"train": sum(util.load_param(src_csv_split_file).values(), start=[])})), src_vid_dir, src_ts_fig_dir, {**param, "batch_size": round(prop[0] * param["batch_size"])}, trainer.log_dir, (1, 0, 0)),
+            tgt_datamodule
+        )
+    )
 
 if __name__ == "__main__":
     import argparse
