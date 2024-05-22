@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 import script.model as M
 import script.utility as util
-from script.data import DataModule, DataModule4CsvAndTsFig, DataModuleCombiner
+from script.data import DataModule, DataModule4CsvAndTsFig, DataModuleMixer
 
 
 def tune_weight(ckpt_file: str, gpu_id: int, param_file: str, src_csv_split_file: str, src_vid_dir: str, src_ts_fig_dir: list[str], tgt_ts_fig_dir: list[str], prop: list[float], result_dir_name: Optional[str] = None) -> None:
@@ -31,7 +31,7 @@ def tune_weight(ckpt_file: str, gpu_id: int, param_file: str, src_csv_split_file
         max_epochs=param["epoch"],
         accelerator="gpu"
     )
-    trainer.fit(model, datamodule=DataModuleCombiner(param, DataModule4CsvAndTsFig(src_csv_split_file, src_vid_dir, src_ts_fig_dir, {**param, "batch_size": round(prop[0] * param["batch_size"])}, trainer.log_dir, (1, 0, 0)), tgt_datamodule))
+    trainer.fit(model, datamodule=DataModuleMixer(param, DataModule4CsvAndTsFig(src_csv_split_file, src_vid_dir, src_ts_fig_dir, {**param, "batch_size": round(prop[0] * param["batch_size"])}, trainer.log_dir, (1, 0, 0)), tgt_datamodule))
 
 if __name__ == "__main__":
     import argparse

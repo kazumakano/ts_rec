@@ -291,7 +291,7 @@ class DataModule4CsvAndTsFig(pl.LightningDataModule):
         torch.save(dataset, data_file)
         self.data_files[mode].append(data_file)
 
-class _DataLoaderCombiner:
+class _DataLoaderMixer:
     def __init__(self, shuffle: bool, src: data.DataLoader | _MultiDataLoader, tgt: data.DataLoader) -> None:
         self.shuffle = shuffle
         self.src, self.tgt = self._use_eternal_loader(src), tgt
@@ -314,7 +314,7 @@ class _DataLoaderCombiner:
             for b in loader:
                 yield b
 
-class DataModuleCombiner(pl.LightningDataModule):
+class DataModuleMixer(pl.LightningDataModule):
     def __init__(self, param: dict[str, util.Param], src: DataModule | DataModule4CsvAndTsFig, tgt: DataModule, seed: int = 0) -> None:
         random.seed(a=seed)
         super().__init__()
@@ -326,8 +326,8 @@ class DataModuleCombiner(pl.LightningDataModule):
         self.src.setup(stage)
         self.tgt.setup(stage)
 
-    def train_dataloader(self) -> _DataLoaderCombiner:
-        return _DataLoaderCombiner(self.hparams["shuffle"], self.src.train_dataloader(), self.tgt.train_dataloader())
+    def train_dataloader(self) -> _DataLoaderMixer:
+        return _DataLoaderMixer(self.hparams["shuffle"], self.src.train_dataloader(), self.tgt.train_dataloader())
 
     def val_dataloader(self) -> data.DataLoader:
         return self.tgt.val_dataloader()
