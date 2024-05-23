@@ -37,7 +37,7 @@ def tune_weight(ckpt_file: str, gpu_id: int, param_file: str, src_csv_split_file
         model,
         datamodule=DataModuleMixer(
             param,
-            DataModule4CsvAndTsFig(io.StringIO(initial_value=yaml.safe_dump({"train": sum(util.load_param(src_csv_split_file).values(), start=[])})), src_vid_dir, src_ts_fig_dir, {**param, "batch_size": round(prop[0] * param["batch_size"])}, trainer.log_dir, (1, 0, 0)),
+            DataModule4CsvAndTsFig(io.StringIO(initial_value=yaml.safe_dump({"train": sum(util.load_param(src_csv_split_file).values(), start=[]), "validate": []})), src_vid_dir, src_ts_fig_dir, {**param, "batch_size": round(prop[0] * param["batch_size"])}, trainer.log_dir, (1, 0, 0)),
             tgt_datamodule
         )
     )
