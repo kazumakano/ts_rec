@@ -53,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument("-sd", "--src_ts_fig_dir", nargs="*", help="specify timestamp figure dataset directory", metavar="PATH_TO_TS_FIG_DIR")
     parser.add_argument("-td", "--tgt_ts_fig_dir", nargs="+", help="specify target timestamp figure dataset directory", metavar="PATH_TO_TS_FIG_DIR")
     parser.add_argument("-g", "--gpu_id", default=0, type=int, help="specify GPU device ID", metavar="GPU_ID")
-    parser.add_argument("--prop", nargs=2, default=(0.999, 0.001), type=float, help="specify mix proportion", metavar="PROP")
+    parser.add_argument("--prop", nargs=2, default=(0.99, 0.01), type=float, help="specify mix proportion", metavar="PROP")
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
     args = parser.parse_args()
 
