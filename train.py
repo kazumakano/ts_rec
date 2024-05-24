@@ -10,7 +10,7 @@ import script.utility as util
 from script.data import DataModule
 
 
-def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: list[str], ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
+def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dirs: list[str], ckpt_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
     torch.set_float32_matmul_precision("high")
 
     if isinstance(param, str):
@@ -18,7 +18,7 @@ def train(gpu_id: int, param: dict[str, util.Param] | str, ts_fig_dir: list[str]
     param["enable_loss_weight"] = True
     model_cls = M.get_model_cls(param["arch"])
 
-    datamodule = DataModule(param, ts_fig_dir)
+    datamodule = DataModule(param, ts_fig_dirs)
     trainer = pl.Trainer(
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
         callbacks=ModelCheckpoint(monitor="validation_loss", save_last=True),
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     import sys
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--ts_fig_dir", nargs="+", help="specify timestamp figure dataset directory", metavar="PATH_TO_TS_FIG_DIR")
+    parser.add_argument("-d", "--ts_fig_dirs", nargs="+", required=True, help="specify list of timestamp figure dataset directories", metavar="PATH_TO_TS_FIG_DIR")
     parser.add_argument("-g", "--gpu_id", default=0, type=int, help="specify GPU device ID", metavar="GPU_ID")
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         parser.add_argument("-c", "--ckpt_file", help="specify checkpoint file", metavar="PATH_TO_CKPT_FILE")
         args = parser.parse_args()
 
-        train(args.gpu_id, args.param_file, args.ts_fig_dir, args.ckpt_file, args.result_dir_name)
+        train(args.gpu_id, args.param_file, args.ts_fig_dirs, args.ckpt_file, args.result_dir_name)
 
     else:
         args = parser.parse_args()

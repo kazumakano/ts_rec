@@ -144,15 +144,15 @@ class VidDataset4ManyFrms(VidDataset):
                 self.img[i] = TF.normalize(self.img[i], (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, param: dict[str, util.Param], ts_fig_dir: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, prop: tuple[float, float, float] = (0.8, 0.1, 0.1), seed: int = 0) -> None:
+    def __init__(self, param: dict[str, util.Param], ts_fig_dirs: Optional[list[str]] = None, vid_dir: Optional[str] = None, ex_file: Optional[str] = None, prop: tuple[float, float, float] = (0.8, 0.1, 0.1), seed: int = 0) -> None:
         super().__init__()
 
         self.dataset: dict[str, TsFigDataset | VidDataset] = {}
         self.save_hyperparameters(param)
 
-        if ts_fig_dir is not None:
+        if ts_fig_dirs is not None:
             files = []
-            for d in ts_fig_dir:
+            for d in ts_fig_dirs:
                 files += glob(path.join(d, "*_[0-9].tif"))
             self.train_files, self.val_files, self.test_files = util.random_split(files, prop, seed)
 
@@ -229,7 +229,7 @@ class _MultiDataLoader:
             queue.put(torch.load(f))
 
 class DataModule4CsvAndTsFig(pl.LightningDataModule):
-    def __init__(self, csv_split_file: str, vid_dir: str, ts_fig_dir: list[str], param: dict[str, util.Param], result_dir: str, prop: tuple[float, float, float] = (0.8, 0.1, 0.1), seed: int = 0) -> None:
+    def __init__(self, csv_split_file: str, vid_dir: str, ts_fig_dirs: list[str], param: dict[str, util.Param], result_dir: str, prop: tuple[float, float, float] = (0.8, 0.1, 0.1), seed: int = 0) -> None:
         random.seed(a=seed)
         super().__init__()
 
@@ -241,7 +241,7 @@ class DataModule4CsvAndTsFig(pl.LightningDataModule):
         self.vid_dir = vid_dir
 
         files = []
-        for d in ts_fig_dir:
+        for d in ts_fig_dirs:
             files += glob(path.join(d, "*_[0-9].tif"))
         files = util.random_split(files, prop, seed)
         self.ts_fig_split = {"train": files[0], "validate": files[1], "test": files[2]}
