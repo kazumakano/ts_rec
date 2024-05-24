@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--param_list_file", required=True, help="specify parameter list file", metavar="PATH_TO_PARAM_LIST_FILE")
-    parser.add_argument("-d", "--ts_fig_dirs", nargs="+", required=True, help="specify timestamp figure dataset directory", metavar="PATH_TO_TS_FIG_DIR")
+    parser.add_argument("-d", "--ts_fig_dirs", nargs="+", required=True, help="specify list of timestamp figure dataset directories", metavar="PATH_TO_TS_FIG_DIR")
     parser.add_argument("-b", "--bot_conf_file", help="enable slack bot", metavar="PATH_TO_BOT_CONF_FILE")
     parser.add_argument("-g", "--gpu_ids", nargs="+", type=int, help="specify list of GPU device IDs", metavar="GPU_ID")
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
