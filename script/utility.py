@@ -217,7 +217,7 @@ def get_consis_ts(estim: np.ndarray, label_at_start_frm: timedelta, label_is_acc
 
     return likely_ts, inconsis_frm_idxes
 
-def get_most_likely_ts(estim: np.ndarray) -> np.ndarray:
+def get_most_likely_ts(estim: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Decide most likely timestamps based on model outputs, eliminating invalid timestamps.
 
@@ -232,13 +232,20 @@ def get_most_likely_ts(estim: np.ndarray) -> np.ndarray:
     ts : ndarray[timedelta]
         Most likely timestamps.
         Shape is (batch, ).
+    conf : ndarray[float32]
+        Model output confidence.
+        Shape is (batch, 6).
     """
 
-    most_likely_ts = np.empty(len(estim), dtype=timedelta)
-    for i, (h_1, h_2, m_1, m_2, s_1, s_2) in enumerate(softmax(-estim, axis=2).argsort(axis=2)):
-        most_likely_ts[i] = timedelta(seconds=10 * int(s_1[s_1 < 6][0]) + int(s_2[0]), minutes=10 * int(m_1[m_1 < 6][0]) + int(m_2[0]), hours=10 * int(h_1[h_1 < 3][0]) + int(h_2[0]))
+    prob = softmax(estim, axis=2)
 
-    return most_likely_ts
+    conf = np.empty((len(estim), 6), dtype=np.float32)
+    most_likely_ts = np.empty(len(estim), dtype=timedelta)
+    for i, (h_1, h_2, m_1, m_2, s_1, s_2) in enumerate((-prob).argsort(axis=2)):
+        most_likely_ts[i] = timedelta(seconds=10 * int(s_1[s_1 < 6][0]) + int(s_2[0]), minutes=10 * int(m_1[m_1 < 6][0]) + int(m_2[0]), hours=10 * int(h_1[h_1 < 3][0]) + int(h_2[0]))
+        conf[i] = prob[i][0][h_1[h_1 < 3][0]], prob[i][1][h_2[0]], prob[i][2][m_1[m_1 < 6][0]], prob[i][3][m_2[0]], prob[i][4][s_1[s_1 < 6][0]], prob[i][5][s_2[0]]
+
+    return most_likely_ts, conf
 
 def get_result_dir(dir_name: str | None) -> str:
     if dir_name is None:
@@ -393,26 +400,26 @@ def write_date(date: date, result_dir: str) -> None:
         f.write(str(date) + "\n")
 
 @overload
-def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
+def write_predict_result(cam_name: np.ndarray, vid_idx: np.ndarray, ts: np.ndarray, conf: np.ndarray, label: np.ndarray, frm_num: int, result_dir: str) -> None:
     ...
 
 @overload
-def write_predict_result(cam_name: str, vid_idx: int, ts: np.ndarray, label_at_start_frm: timedelta, start_frm_idx: int, result_dir: str, inconsis_frm_idxes: list[int]) -> None:
+def write_predict_result(cam_name: str, vid_idx: int, ts: np.ndarray, conf: np.ndarray, inconsis_frm_idxes: list[int], start_frm_idx: int, result_dir: str) -> None:
     ...
 
-def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, ts: np.ndarray, label: np.ndarray | timedelta, frm_num_or_start_frm_idx: int, result_dir: str, inconsis_frm_idxes: list[int] | None = None) -> None:
+def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, ts: np.ndarray, conf: np.ndarray, label_or_inconsis_frm_idxes: np.ndarray | timedelta, frm_num_or_start_frm_idx: int, result_dir: str) -> None:
     with open(path.join(result_dir, "predict_results.csv"), mode="a") as f:
         writer = csv.writer(f)
 
         if isinstance(cam_name, str):
             if f.tell() == 0:
-                writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec", "is_inconsis"))
+                writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "conf_h_1", "conf_h_2", "conf_m_1", "conf_m_2", "conf_s_1", "conf_s_2", "is_inconsis"))
             t: timedelta
             for i, t in enumerate(ts):
-                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, timedelta2str(t), (t.total_seconds() - label.total_seconds() + 43200) % 86400 - 43200, "inconsis" if i in inconsis_frm_idxes else None))
+                writer.writerow((cam_name, vid_idx, frm_num_or_start_frm_idx + i, timedelta2str(t), *[format(j, ".2f") for j in conf[i]], "inconsis" if i in label_or_inconsis_frm_idxes else None))
         else:
             if f.tell() == 0:
-                writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "diff_in_sec"))
+                writer.writerow(("cam", "vid_idx", "frm_idx", "recog", "conf_h_1", "conf_h_2", "conf_m_1", "conf_m_2", "conf_s_1", "conf_s_2", "diff_in_sec"))
             t: timedelta
             for i, t in enumerate(ts):
-                writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, timedelta2str(t), (t.total_seconds() - label[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
+                writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, timedelta2str(t), *[format(j, ".2f") for j in conf[i]], (t.total_seconds() - label_or_inconsis_frm_idxes[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))

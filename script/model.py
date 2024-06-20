@@ -91,7 +91,7 @@ class _BaseModule(pl.LightningModule):
         util.write_predict_result(
             self.trainer.predict_dataloaders.dataset.cam_name,
             self.trainer.predict_dataloaders.dataset.vid_idx,
-            util.get_most_likely_ts(estim),
+            *util.get_most_likely_ts(estim),
             self.trainer.predict_dataloaders.dataset.label,
             self.trainer.predict_dataloaders.dataset.frm_num,
             self.logger.log_dir
@@ -107,15 +107,15 @@ class _BaseModule4ManyFrms(_BaseModule):
     def on_predict_end(self) -> None:
         estim = torch.vstack(self.predict_outputs).cpu().numpy()
 
-        estim_ts = util.get_most_likely_ts(estim)
+        estim_ts, conf = util.get_most_likely_ts(estim)
         util.write_predict_result(
             self.trainer.predict_dataloaders.dataset.cam_name,
             self.trainer.predict_dataloaders.dataset.vid_idx,
             estim_ts,
-            self.trainer.predict_dataloaders.dataset.label_at_start_frm,
+            conf,
+            util.check_ts_consis(estim_ts, None if self.trainer.predict_dataloaders.dataset.start_frm_idx == 0 else self.trainer.predict_dataloaders.dataset.label_at_start_frm),
             self.trainer.predict_dataloaders.dataset.start_frm_idx,
             self.logger.log_dir,
-            util.check_ts_consis(estim_ts, None if self.trainer.predict_dataloaders.dataset.start_frm_idx == 0 else self.trainer.predict_dataloaders.dataset.label_at_start_frm)
         )
 
         self.ts_at_end_frm = estim_ts[-1]
