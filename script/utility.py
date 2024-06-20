@@ -253,6 +253,49 @@ def get_result_dir(dir_name: str | None) -> str:
 
     return path.join(path.dirname(__file__), "../result/", dir_name)
 
+def _linspace(start: timedelta | None, stop: timedelta | None, num: int) -> np.ndarray:
+    ts = np.empty(num, dtype=timedelta)
+    if start is None and stop is None:
+        raise Exception("either start or stop must be specified")
+    elif start is None:
+        for i in range(num):
+            ts[i] = stop - timedelta(seconds=0.2 * (num - i - 1))
+    elif stop is None:
+        for i in range(num):
+            ts[i] = start + timedelta(seconds=0.2 * i)
+    else:
+        if num == 1:
+            ts[0] = (start + stop) / 2
+        else:
+            for i in range(num):
+                ts[i] = start + (stop - start) / (num - 1) * i
+
+    return ts
+
+def interp_unconf_ts(ts: np.ndarray, conf: np.ndarray, thresh: float) -> np.ndarray:
+    interp_ts = ts.copy()
+
+    unconf_start_idx = None
+    for i in range(len(conf) - 4):
+        if conf[i:i + 5].min() < thresh:
+            if unconf_start_idx is None:
+                unconf_start_idx = i
+        else:
+            if unconf_start_idx is not None:
+                if unconf_start_idx < 1:
+                    interp_ts[:i] = _linspace(None, ts[i:i + 5].mean() - timedelta(seconds=0.1), i)
+                else:
+                    interp_ts[unconf_start_idx + 4:i] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), ts[i:i + 5].mean() - timedelta(seconds=0.1), i - unconf_start_idx - 4)
+                unconf_start_idx = None
+    if unconf_start_idx is not None:
+        interp_ts[unconf_start_idx + 4:] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), None, len(ts) - unconf_start_idx - 4)
+
+    t: timedelta
+    for i, t in enumerate(interp_ts):
+        interp_ts[i] = timedelta(seconds=math.floor(t.total_seconds()))
+
+    return interp_ts
+
 def load_param(file_or_stream: str | io.StringIO) -> dict[str, Param | list[Param] | list[str]]:
     if isinstance(file_or_stream, str):
         with open(file_or_stream) as f:
@@ -423,3 +466,13 @@ def write_predict_result(cam_name: np.ndarray | str, vid_idx: np.ndarray | int, 
             t: timedelta
             for i, t in enumerate(ts):
                 writer.writerow((cam_name[i // frm_num_or_start_frm_idx], vid_idx[i // frm_num_or_start_frm_idx], i % frm_num_or_start_frm_idx, timedelta2str(t), *[format(j, ".2f") for j in conf[i]], (t.total_seconds() - label_or_inconsis_frm_idxes[i // frm_num_or_start_frm_idx].total_seconds() + 43200) % 86400 - 43200))
+
+def write_interp_result(cam_name: str, vid_idx: int, ts: np.ndarray, inconsis_frm_idxes: np.ndarray | timedelta, start_frm_idx: int, result_dir: str) -> None:
+    with open(path.join(result_dir, "interp_results.csv"), mode="a") as f:
+        writer = csv.writer(f)
+
+        if f.tell() == 0:
+            writer.writerow(("cam", "vid_idx", "frm_idx", "interp", "is_inconsis"))
+        t: timedelta
+        for i, t in enumerate(ts):
+            writer.writerow((cam_name, vid_idx, start_frm_idx + i, timedelta2str(t), "inconsis" if i in inconsis_frm_idxes else None))

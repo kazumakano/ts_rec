@@ -113,12 +113,21 @@ class _BaseModule4ManyFrms(_BaseModule):
             self.trainer.predict_dataloaders.dataset.vid_idx,
             estim_ts,
             conf,
-            util.check_ts_consis(estim_ts, None if self.trainer.predict_dataloaders.dataset.start_frm_idx == 0 else self.trainer.predict_dataloaders.dataset.label_at_start_frm),
+            util.check_ts_consis(estim_ts, None if self.trainer.predict_dataloaders.dataset.start_frm_idx == 0 else self.last_estim_ts),
             self.trainer.predict_dataloaders.dataset.start_frm_idx,
             self.logger.log_dir,
         )
+        interp_ts = util.interp_unconf_ts(estim_ts, conf, 0.995)
+        util.write_interp_result(
+            self.trainer.predict_dataloaders.dataset.cam_name,
+            self.trainer.predict_dataloaders.dataset.vid_idx,
+            interp_ts,
+            util.check_ts_consis(interp_ts, None if self.trainer.predict_dataloaders.dataset.start_frm_idx == 0 else self.last_interp_ts),
+            self.trainer.predict_dataloaders.dataset.start_frm_idx,
+            self.logger.log_dir
+        )
 
-        self.ts_at_end_frm = estim_ts[-1]
+        self.last_estim_ts, self.last_interp_ts = estim_ts[-1], interp_ts[-1]
 
 class CNN2(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
