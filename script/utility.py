@@ -233,7 +233,7 @@ def get_most_likely_ts(estim: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         Most likely timestamps.
         Shape is (batch, ).
     conf : ndarray[float32]
-        Model output confidence.
+        Timestamp confidences.
         Shape is (batch, 6).
     """
 
@@ -253,16 +253,50 @@ def get_result_dir(dir_name: str | None) -> str:
 
     return path.join(path.dirname(__file__), "../result/", dir_name)
 
-def _linspace(start: timedelta | None, stop: timedelta | None, num: int) -> np.ndarray:
+@overload
+def _linspace(start: timedelta, stop: timedelta, num: int) -> np.ndarray:
+    ...
+
+@overload
+def _linspace(start: timedelta, stop: None, num: int, step: timedelta) -> np.ndarray:
+    ...
+
+@overload
+def _linspace(start: None, stop: timedelta, num: int, step: timedelta) -> np.ndarray:
+    ...
+
+def _linspace(start: timedelta | None, stop: timedelta | None, num: int, step: Optional[timedelta] = None) -> np.ndarray:
+    """
+    Linearly interpolate range of [start, stop] with num timestamps, like 'numpy.linspace'.
+    If either start or stop unspecified, interpolate by step.
+
+    Parameters
+    ----------
+    start : timedelta | None
+        Start of interpolation range.
+    stop : timedelta | None
+        End of interpolation range.
+    num : int
+        Interpolation length.
+    step : timedelta, optional
+        Interpolation step if either start or stop unspecified.
+
+    Returns
+    -------
+    ts : ndarray[timedelta]
+        Interpolated timestamps.
+        Shape is (num, ).
+    """
+
     ts = np.empty(num, dtype=timedelta)
     if start is None and stop is None:
         raise Exception("either start or stop must be specified")
     elif start is None:
         for i in range(num):
-            ts[i] = stop - timedelta(seconds=0.2 * (num - i - 1))
+            ts[i] = stop - (num - i - 1) * step
     elif stop is None:
         for i in range(num):
-            ts[i] = start + timedelta(seconds=0.2 * i)
+            ts[i] = start + i * step
     else:
         if num == 1:
             ts[0] = (start + stop) / 2
@@ -273,6 +307,27 @@ def _linspace(start: timedelta | None, stop: timedelta | None, num: int) -> np.n
     return ts
 
 def interp_unconf_ts(ts: np.ndarray, conf: np.ndarray, thresh: float) -> np.ndarray:
+    """
+    Interpolate unconfident timestamps based on 5 confident timestamps at edges.
+
+    Parameters
+    ----------
+    ts : ndarray[timedelta]
+        Sequential timestamps.
+        Shape is (frame, ).
+    conf : ndarray[float32]
+        Sequential timestamp confidences.
+        Shape is (frame, 6).
+    thresh : float
+        Threshold of confidence to interpolate.
+
+    Returns
+    -------
+    ts : ndarray[timedelta]
+        Interpolated sequential timestamps.
+        Shape is (frame, ).
+    """
+
     interp_ts = ts.copy()
 
     unconf_start_idx = None
@@ -283,12 +338,12 @@ def interp_unconf_ts(ts: np.ndarray, conf: np.ndarray, thresh: float) -> np.ndar
         else:
             if unconf_start_idx is not None:
                 if unconf_start_idx < 1:
-                    interp_ts[:i] = _linspace(None, ts[i:i + 5].mean() - timedelta(seconds=0.1), i)
+                    interp_ts[:i] = _linspace(None, ts[i:i + 5].mean() - timedelta(seconds=0.1), i, timedelta(seconds=0.2))
                 else:
                     interp_ts[unconf_start_idx + 4:i] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), ts[i:i + 5].mean() - timedelta(seconds=0.1), i - unconf_start_idx - 4)
                 unconf_start_idx = None
     if unconf_start_idx is not None:
-        interp_ts[unconf_start_idx + 4:] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), None, len(ts) - unconf_start_idx - 4)
+        interp_ts[unconf_start_idx + 4:] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), None, len(ts) - unconf_start_idx - 4, timedelta(seconds=0.2))
 
     t: timedelta
     for i, t in enumerate(interp_ts):
