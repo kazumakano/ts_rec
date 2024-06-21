@@ -1,0 +1,10 @@
+batch_size: 8192
+drop_last: True
+epoch: 50
+learning_rate: 0.00001
+num_workers: 4
+shuffle: True
+
+arch: easyocr
+freeze: False
+scale: 2
