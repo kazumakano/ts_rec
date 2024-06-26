@@ -64,7 +64,7 @@ def infer(ckpt_file: str, param_file: str, vid_reg_exps: list[str], gpu_ids: Opt
     for f in tqdm(sum([glob(e) for e in vid_reg_exps], start=[]), desc="recognizing"):
         if len(pid_queue) >= cuda.device_count() // GPU_PER_TASK:
             pid_queue.remove(ray.wait(pid_queue, num_returns=1)[0][0])
-        pid_queue.append(_test_by_file.remote(path.abspath(ckpt_file), param, path.join(result_dir, path.splitext(path.basename(f))[0]), path.abspath(f)))
+        pid_queue.append(_infer_by_file.remote(path.abspath(ckpt_file), param, path.join(result_dir, path.splitext(path.basename(f))[0]), path.abspath(f)))
 
     ray.get(pid_queue)
 
