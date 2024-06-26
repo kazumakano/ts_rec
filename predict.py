@@ -13,12 +13,11 @@ import script.utility as util
 from script.data import VidDataset
 
 
-def predict(ckpt_file: str, gpu_id: int, param: dict[str, util.Param] | str, vid_dir: str, ex_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
+def predict(ckpt_file: str, gpu_id: int, param_file: str, vid_dir: str, ex_file: Optional[str] = None, result_dir_name: Optional[str] = None) -> None:
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
-    if isinstance(param, str):
-        param = util.load_param(param)
+    param = util.load_param(param_file)
     result_dir = util.get_result_dir(result_dir_name)
 
     model = M.get_model_cls(param["arch"]).load_from_checkpoint(

@@ -50,13 +50,12 @@ def _test_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str,
         trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=param["batch_size"], num_workers=param["num_workers"]))
         dataset_idx += 1
 
-def test(ckpt_file: str, param: dict[str, util.Param] | str, vid_reg_exps: list[str], gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
+def test(ckpt_file: str, param_file: str, vid_reg_exps: list[str], gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
     if gpu_ids is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
     ray.init()
 
-    if isinstance(param, str):
-        param = util.load_param(param)
+    param = util.load_param(param_file)
     if param["batch_size"] % 6 != 0:
         raise Exception("batch size must be divisible by 6")
     result_dir = util.get_result_dir(result_dir_name)
