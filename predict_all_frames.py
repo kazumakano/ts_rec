@@ -79,24 +79,14 @@ def predict(ckpt_file: str, param: dict[str, util.Param] | str, vid_dir: str, ex
 
 if __name__ == "__main__":
     import argparse
-    import json
-    import sys
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--ckpt_file", required=True, help="specify checkpoint file", metavar="PATH_TO_CKPT_FILE")
+    parser.add_argument("-p", "--param_file", required=True, help="specify parameter file", metavar="PATH_TO_PARAM_FILE")
     parser.add_argument("-d", "--vid_dir", required=True, help="specify video directory", metavar="PATH_TO_VID_DIR")
     parser.add_argument("-e", "--ex_file", help="specify exclude file", metavar="PATH_TO_EX_FILE")
     parser.add_argument("-g", "--gpu_ids", nargs="+", type=int, help="specify list of GPU device IDs", metavar="GPU_ID")
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
+    args = parser.parse_args()
 
-    if sys.stdin.isatty():
-        parser.add_argument("-c", "--ckpt_file", required=True, help="specify checkpoint file", metavar="PATH_TO_CKPT_FILE")
-        parser.add_argument("-p", "--param_file", required=True, help="specify parameter file", metavar="PATH_TO_PARAM_FILE")
-        args = parser.parse_args()
-
-        predict(args.ckpt_file, args.param_file, args.vid_dir, args.ex_file, args.gpu_ids, args.result_dir_name)
-
-    else:
-        args = parser.parse_args()
-        lines = sys.stdin.readlines()
-
-        predict(lines[3].rstrip(), json.loads(lines[1]), args.vid_dir, args.ex_file, args.gpu_ids, args.result_dir_name)
+    predict(args.ckpt_file, args.param_file, args.vid_dir, args.ex_file, args.gpu_ids, args.result_dir_name)

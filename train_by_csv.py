@@ -36,25 +36,15 @@ def train(csv_split_file: str, gpu_id: int, param: dict[str, util.Param] | str, 
 
 if __name__ == "__main__":
     import argparse
-    import json
-    import sys
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--csv_split_file", required=True, help="specify csv split file", metavar="PATH_TO_CSV_SPLIT_FILE")
+    parser.add_argument("-p", "--param_file", required=True, help="specify parameter file", metavar="PATH_TO_PARAM_FILE")
     parser.add_argument("-v", "--vid_dir", required=True, help="specify video directory", metavar="PATH_TO_VID_DIR")
     parser.add_argument("-d", "--ts_fig_dirs", nargs="*", default=[], help="specify list of timestamp figure dataset directories", metavar="PATH_TO_TS_FIG_DIR")
+    parser.add_argument("-c", "--ckpt_file", help="specify checkpoint file", metavar="PATH_TO_CKPT_FILE")
     parser.add_argument("-g", "--gpu_id", default=0, type=int, help="specify GPU device ID", metavar="GPU_ID")
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
+    args = parser.parse_args()
 
-    if sys.stdin.isatty():
-        parser.add_argument("-p", "--param_file", required=True, help="specify parameter file", metavar="PATH_TO_PARAM_FILE")
-        parser.add_argument("-c", "--ckpt_file", help="specify checkpoint file", metavar="PATH_TO_CKPT_FILE")
-        args = parser.parse_args()
-
-        train(args.csv_split_file, args.gpu_id, args.param_file, args.ts_fig_dirs, args.vid_dir, args.ckpt_file, args.result_dir_name)
-
-    else:
-        args = parser.parse_args()
-        lines = sys.stdin.readlines()
-
-        train(args.csv_split_file, args.gpu_id, json.loads(lines[1]), args.ts_fig_dir, args.vid_dir, lines[3].rstrip(), args.result_dir_name)
+    train(args.csv_split_file, args.gpu_id, args.param_file, args.ts_fig_dirs, args.vid_dir, args.ckpt_file, args.result_dir_name)
