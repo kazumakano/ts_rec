@@ -26,7 +26,7 @@ GPU_PER_TASK = 1
 MAX_FRM_NUM = 1024
 
 @ray.remote(num_gpus=GPU_PER_TASK)
-def _test_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
+def _infer_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str, vid_file: str) -> None:
     logging.disable()
     torch.set_float32_matmul_precision("high")
 
@@ -50,7 +50,7 @@ def _test_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: str,
         trainer.predict(model=model, dataloaders=DataLoader(dataset, batch_size=param["batch_size"], num_workers=param["num_workers"]))
         dataset_idx += 1
 
-def test(ckpt_file: str, param_file: str, vid_reg_exps: list[str], gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
+def infer(ckpt_file: str, param_file: str, vid_reg_exps: list[str], gpu_ids: Optional[list[int]] = None, result_dir_name: Optional[str] = None) -> None:
     if gpu_ids is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in gpu_ids])
     ray.init()
@@ -79,4 +79,4 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--result_dir_name", help="specify result directory name", metavar="RESULT_DIR_NAME")
     args = parser.parse_args()
 
-    test(args.ckpt_file, args.param_file, args.vid_reg_exps, args.gpu_ids, args.result_dir_name)
+    infer(args.ckpt_file, args.param_file, args.vid_reg_exps, args.gpu_ids, args.result_dir_name)
