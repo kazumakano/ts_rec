@@ -16,7 +16,7 @@ from scipy.special import softmax
 from torchvision import transforms as T
 
 
-Param = bool | float | int
+Param = bool | float | int | str | None
 
 def aug_img(img: torch.Tensor, aug_num: int, brightness: float, contrast: float, hue: float, max_shift_len: int) -> torch.Tensor:
     """
