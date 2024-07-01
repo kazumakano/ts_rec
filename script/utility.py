@@ -376,7 +376,7 @@ def plot_all_predict_results(result_dir: str, ver: int = 0, use_interped: bool =
     for i, d in enumerate(dirs):
         idx = np.empty(0, dtype=np.int64)
         ts = np.empty(0, dtype=datetime)
-        for f in iglob(path.join(d, f"??-??-??_*/version_{ver}/{'interp' if use_interped else 'predict'}_results.csv")):
+        for f in sorted(iglob(path.join(d, f"??-??-??_*/version_{ver}/{'interp' if use_interped else 'predict'}_results.csv"))):
             results = pd.read_csv(f, usecols=("interp" if use_interped else "recog", ))
             idx = np.hstack((idx, results.index + (0 if len(idx) == 0 else idx[-1])))
             tmp = np.empty(len(results), dtype=datetime)
@@ -393,7 +393,7 @@ def plot_predict_results_by_cam(cam_name: str, result_dir: str, ver: int = 0, us
 
     files = glob(path.join(result_dir, cam_name, f"??-??-??_*/version_{ver}/{'interp' if use_interped else 'predict'}_results.csv"))
     fig, axes = plt.subplots(nrows=math.ceil(len(files) / 2), ncols=2, figsize=(16, 4 * math.ceil(len(files) / 2)))
-    for i, f in enumerate(files):
+    for i, f in enumerate(sorted(files)):
         results = pd.read_csv(f, usecols=("interp" if use_interped else "recog", ))
         ts = np.empty(len(results), dtype=datetime)
         for j, t in enumerate(results.loc[:, "interp" if use_interped else "recog"]):
