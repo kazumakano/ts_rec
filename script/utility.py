@@ -501,6 +501,14 @@ def timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
 
     return f"{(ts % timedelta(days=1) if restrict_fmt else ts) // timedelta(hours=1):02d}:{ts % timedelta(hours=1) // timedelta(minutes=1):02d}:{ts % timedelta(minutes=1) // timedelta(seconds=1):02d}"
 
+def unix2datetime(ts: np.ndarray) -> np.ndarray:
+    ts = ts.astype(object)
+
+    for i, t in enumerate(ts):
+        ts[i] = datetime.fromtimestamp(t)
+
+    return ts.astype(datetime)
+
 def write_date(date: date, result_dir: str) -> None:
     with open(path.join(result_dir, "date.txt"), mode="w") as f:
         f.write(str(date) + "\n")
