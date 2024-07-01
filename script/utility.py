@@ -368,7 +368,7 @@ def read_date(result_dir: str) -> date:
     with open(path.join(result_dir, "date.txt")) as f:
         return datetime.strptime(f.readline(), "%Y-%m-%d\n").date()
 
-def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
+def plot_all_predict_results(result_dir: str, ver: int = 0, use_interped: bool = False) -> None:
     true_date = read_date(result_dir)
 
     dirs = glob(path.join(result_dir, "*/"))
@@ -376,11 +376,11 @@ def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
     for i, d in enumerate(dirs):
         idx = np.empty(0, dtype=np.int64)
         ts = np.empty(0, dtype=datetime)
-        for f in iglob(path.join(d, f"??-??-??_*/version_{ver}/predict_results.csv")):
-            results = pd.read_csv(f, usecols=("recog", ))
+        for f in iglob(path.join(d, f"??-??-??_*/version_{ver}/{'interp' if use_interped else 'predict'}_results.csv")):
+            results = pd.read_csv(f, usecols=("interp" if use_interped else "recog", ))
             idx = np.hstack((idx, results.index + (0 if len(idx) == 0 else idx[-1])))
             tmp = np.empty(len(results), dtype=datetime)
-            for j, t in enumerate(results.loc[:, "recog"]):
+            for j, t in enumerate(results.loc[:, "interp" if use_interped else "recog"]):
                 tmp[j] = datetime.strptime(t, "%H:%M:%S") + (true_date - date(1900, 1, 1))
             ts = np.hstack((ts, tmp))
 
@@ -388,15 +388,15 @@ def plot_all_predict_results(result_dir: str, ver: int = 0) -> None:
         axes[i // 2, i % 2].set_title(f"camera {path.basename(path.normpath(d))}")
     fig.show()
 
-def plot_predict_results_by_cam(cam_name: str, result_dir: str, ver: int = 0) -> None:
+def plot_predict_results_by_cam(cam_name: str, result_dir: str, ver: int = 0, use_interped: bool = False) -> None:
     true_date = read_date(result_dir)
 
-    files = glob(path.join(result_dir, cam_name, f"??-??-??_*/version_{ver}/predict_results.csv"))
+    files = glob(path.join(result_dir, cam_name, f"??-??-??_*/version_{ver}/{'interp' if use_interped else 'predict'}_results.csv"))
     fig, axes = plt.subplots(nrows=math.ceil(len(files) / 2), ncols=2, figsize=(16, 4 * math.ceil(len(files) / 2)))
     for i, f in enumerate(files):
-        results = pd.read_csv(f, usecols=("recog", ))
+        results = pd.read_csv(f, usecols=("interp" if use_interped else "recog", ))
         ts = np.empty(len(results), dtype=datetime)
-        for j, t in enumerate(results.loc[:, "recog"]):
+        for j, t in enumerate(results.loc[:, "interp" if use_interped else "recog"]):
             ts[j] = datetime.strptime(t, "%H:%M:%S") + (true_date - date(1900, 1, 1))
 
         axes[i // 2, i % 2].scatter(results.index, ts, s=1)
