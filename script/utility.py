@@ -467,6 +467,14 @@ def read_head_n_frms(file: str, n: int, skip_one_by_one: bool = False, start_idx
 def str2time(ts: str) -> time:
     return datetime.strptime(ts, "%H:%M:%S").time()
 
+def str2unix(date: date, time: pd.Series) -> np.ndarray:
+    ts = np.empty(len(time), dtype=np.float64)
+    for i, t in enumerate(time):
+        t = str2time(t)
+        ts[i] = datetime(date.year, date.month, date.day, hour=t.hour, minute=t.minute, second=t.second).timestamp()
+
+    return ts
+
 def timedelta2str(ts: timedelta, restrict_fmt: bool = True) -> str:
     """
     Convert timestamp to string.
