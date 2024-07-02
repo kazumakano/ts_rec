@@ -3,7 +3,7 @@ import random
 import threading
 from datetime import timedelta
 from glob import glob, iglob
-from os import makedirs, mkdir
+from os import makedirs
 from queue import Queue
 from typing import Generator, Literal, Optional, Self
 import cv2
@@ -212,9 +212,6 @@ class DataModule(pl.LightningDataModule):
         return self
 
     def save(self, dir: str) -> None:
-        if not path.exists(dir):
-            mkdir(dir)
-
         torch.save((self.dataset, self.hparams), path.join(dir, "data.pt"))
 
     @staticmethod
