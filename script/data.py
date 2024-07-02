@@ -264,9 +264,8 @@ class DataModule4CsvAndTsFig(pl.LightningDataModule):
     def setup(self, stage: str) -> None:
         match stage:
             case "fit":
-                if "train" not in self.data_files.keys():
-                    self._load_and_save("train")
-                    self._load_and_save("validate")
+                self._load_and_save("train")
+                self._load_and_save("validate")
             case "test":
                 self._load_and_save("test")
 
