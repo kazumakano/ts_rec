@@ -28,7 +28,7 @@ def train(csv_split_file: str, gpu_id: int, param_file: str, ts_fig_dirs: list[s
 
     if ckpt_file is None:
         trainer.fit(model_cls(param), datamodule=datamodule)
-        ckpt_file = glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0]
+        ckpt_file = glob(path.join(trainer.log_dir, "checkpoints/epoch=*-step=*.ckpt"))[0]
 
     trainer.test(model=model_cls.load_from_checkpoint(ckpt_file), datamodule=datamodule)
 

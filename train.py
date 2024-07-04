@@ -29,7 +29,7 @@ def train(gpu_id: int, param_file: str, ts_fig_dirs: list[str], ckpt_file: Optio
     if ckpt_file is None:
         datamodule.setup("fit")
         trainer.fit(model_cls(param, datamodule.dataset["train"].calc_loss_weight()), datamodule=datamodule)
-        ckpt_file = glob(path.join(trainer.log_dir, "checkpoints/", "epoch=*-step=*.ckpt"))[0]
+        ckpt_file = glob(path.join(trainer.log_dir, "checkpoints/epoch=*-step=*.ckpt"))[0]
 
     trainer.test(model=model_cls.load_from_checkpoint(ckpt_file, loss_weight=torch.empty(10, dtype=torch.float32)), datamodule=datamodule)
 
