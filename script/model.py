@@ -193,25 +193,6 @@ class EasyOCR(_BaseModule):
 
         return output
 
-class FullNet(_BaseModule):
-    def __init__(self, loss_weight: Optional[torch.Tensor] = None) -> None:
-        super().__init__(loss_weight, None)
-
-        self.layers = nn.Sequential(
-            nn.Linear(1122, 512),
-            nn.ReLU(),
-            nn.Dropout(p=0.2),
-            nn.Linear(512, 64),
-            nn.ReLU(),
-            nn.Dropout(p=0.2),
-            nn.Linear(64, 10),
-        )
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
-        output = self.layers(input.flatten(start_dim=1))
-
-        return output
-
 class VGG(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight, param)
