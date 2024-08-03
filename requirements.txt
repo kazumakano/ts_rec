@@ -5,7 +5,6 @@ matplotlib
 numpy
 opencv-python
 pandas
-Pillow
 pytorch-lightning
 PyYAML
 ray[air]
