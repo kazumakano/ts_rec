@@ -52,6 +52,8 @@ class CsvDataset(data.Dataset):
             for _ in range(stride - 1):
                 cap.read()
 
+        cap.release()
+
         self.img = self.img[[self.aug_num * (6 * i + j) + k for i in sharp_frm_idxes for j in range(6) for k in range(self.aug_num)]]
         self.label = self.label[[6 * i + j for i in sharp_frm_idxes for j in range(6)]]
 
