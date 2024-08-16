@@ -187,8 +187,8 @@ class EasyOCR(_BaseModule):
                 p.requires_grad = False
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:    # (batch, channel, height, width) -> (batch, class)
-        input = TF.resize(TF.rgb_to_grayscale(input), (self.hparams["scale"] * input.shape[2], self.hparams["scale"] * input.shape[3]), antialias=True)
-        hidden = F.adaptive_avg_pool2d(self.extractor(input).permute(0, 3, 1, 2), (256, 1))
+        hidden: torch.Tensor = self.extractor(TF.resize(TF.rgb_to_grayscale(input), (self.hparams["scale"] * input.shape[2], self.hparams["scale"] * input.shape[3]), antialias=True))
+        hidden = F.adaptive_avg_pool2d(hidden.permute(0, 3, 1, 2), (256, 1))
         output = self.predictor(hidden.flatten(start_dim=1))
 
         return output
