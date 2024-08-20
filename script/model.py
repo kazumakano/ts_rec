@@ -193,7 +193,7 @@ class EasyOCR(_BaseModule):
 
         return output
 
-class VGG(_BaseModule):
+class VGG8(_BaseModule):
     def __init__(self, param: dict[str, int], loss_weight: Optional[torch.Tensor] = None) -> None:
         super().__init__(loss_weight, param)
 
@@ -225,22 +225,27 @@ class VGG(_BaseModule):
 
         return output
 
+class CNN24ManyFrms(_BaseModule4ManyFrms, CNN2):
+    ...
+
 class CNN34ManyFrms(_BaseModule4ManyFrms, CNN3):
     ...
 
 class EasyOCR4ManyFrms(_BaseModule4ManyFrms, EasyOCR):
     ...
 
-class VGG4ManyFrms(_BaseModule4ManyFrms, VGG):
+class VGG84ManyFrms(_BaseModule4ManyFrms, VGG8):
     ...
 
-def get_model_cls(name: Literal["cnn3", "easyocr", "vgg"], apply_many_frms: bool = False) -> type[CNN3 | CNN34ManyFrms | EasyOCR | EasyOCR4ManyFrms | VGG | VGG4ManyFrms]:
+def get_model_cls(name: Literal["cnn2", "cnn3", "easyocr", "vgg8"], apply_many_frms: bool = False) -> type[CNN2 | CNN24ManyFrms | CNN3 | CNN34ManyFrms | EasyOCR | EasyOCR4ManyFrms | VGG8 | VGG84ManyFrms]:
     match name:
+        case "cnn2":
+            return CNN24ManyFrms if apply_many_frms else CNN2
         case "cnn3":
             return CNN34ManyFrms if apply_many_frms else CNN3
         case "easyocr":
             return EasyOCR4ManyFrms if apply_many_frms else EasyOCR
-        case "vgg":
-            return VGG4ManyFrms if apply_many_frms else VGG
+        case "vgg8":
+            return VGG84ManyFrms if apply_many_frms else VGG8
         case _:
             raise Exception(f"unknown model {name} was specified")
