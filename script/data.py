@@ -17,7 +17,7 @@ from tqdm import tqdm
 from . import utility as util
 
 
-class CsvDataset(data.Dataset):
+class TsCsvDataset(data.Dataset):
     def __init__(self, csv_file: str, vid_dir: str, vid_idx: int, aug_num: int = 4, brightness: float = 0.2, contrast: float = 0.2, hue: float = 0.2, max_shift_len: int = 4, norm: bool = False, stride: int = 1) -> None:
         self.aug_num = aug_num
 
@@ -294,7 +294,7 @@ class DataModule4CsvAndTsFig(pl.LightningDataModule):
         i = 0
         for f in self.csv_split[mode]:
             for j in pd.read_csv(f, usecols=("vid_idx", )).loc[:, "vid_idx"].unique():
-                dataset = CsvDataset(f, self.vid_dir, j) if mode == "train" else CsvDataset(f, self.vid_dir, j, 1)
+                dataset = TsCsvDataset(f, self.vid_dir, j) if mode == "train" else TsCsvDataset(f, self.vid_dir, j, 1)
                 data_file = path.join(self.result_dir, f"{mode}_data_{i}.pt")
                 torch.save(dataset, data_file)
                 self.data_files[mode].append(data_file)
