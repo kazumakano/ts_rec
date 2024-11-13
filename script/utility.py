@@ -306,7 +306,7 @@ def _linspace(start: timedelta | None, stop: timedelta | None, num: int, step: O
 
     return ts
 
-def interp_unconf_ts(ts: np.ndarray, conf: np.ndarray, thresh: float) -> np.ndarray:
+def interp_unconf_ts(ts: np.ndarray, conf: np.ndarray, thresh: float) -> tuple[np.ndarray, bool]:
     """
     Interpolate unconfident timestamps based on 5 confident timestamps at edges.
 
@@ -326,9 +326,12 @@ def interp_unconf_ts(ts: np.ndarray, conf: np.ndarray, thresh: float) -> np.ndar
     ts : ndarray[timedelta]
         Interpolated sequential timestamps.
         Shape is (frame, ).
+    succeeded : bool
+        This value takes 'True' if all timestamps were confident or interpolated successfully, 'False' otherwise.
     """
 
     interp_ts = ts.copy()
+    succeeded = True
 
     unconf_start_idx = None
     for i in range(len(conf) - 4):
@@ -343,13 +346,16 @@ def interp_unconf_ts(ts: np.ndarray, conf: np.ndarray, thresh: float) -> np.ndar
                     interp_ts[unconf_start_idx + 4:i] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), ts[i:i + 5].mean() - timedelta(seconds=0.1), i - unconf_start_idx - 4)
                 unconf_start_idx = None
     if unconf_start_idx is not None:
-        interp_ts[unconf_start_idx + 4:] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), None, len(ts) - unconf_start_idx - 4, timedelta(seconds=0.2))
+        if unconf_start_idx < 1:
+            succeeded = False
+        else:
+            interp_ts[unconf_start_idx + 4:] = _linspace(ts[unconf_start_idx - 1:unconf_start_idx + 4].mean() + timedelta(seconds=1.1), None, len(ts) - unconf_start_idx - 4, timedelta(seconds=0.2))
 
     t: timedelta
     for i, t in enumerate(interp_ts):
         interp_ts[i] = timedelta(seconds=math.floor(t.total_seconds()))
 
-    return interp_ts
+    return interp_ts, succeeded
 
 def load_param(file_or_stream: str | io.StringIO) -> dict[str, Param | list[Param] | list[str]]:
     if isinstance(file_or_stream, str):

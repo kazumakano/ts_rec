@@ -1,6 +1,7 @@
 import math
 import os.path as path
 import pickle
+import warnings
 from typing import Literal, Optional
 import easyocr
 import numpy as np
@@ -120,7 +121,9 @@ class _BaseModule4ManyFrms(_BaseModule):
         self.last_estim_ts = estim_ts[-1]
 
         if self.hparams["interp_conf_thresh"] is not None:
-            interp_ts = util.interp_unconf_ts(estim_ts, conf, self.hparams["interp_conf_thresh"])
+            interp_ts, interp_succeeded = util.interp_unconf_ts(estim_ts, conf, self.hparams["interp_conf_thresh"])
+            if not interp_succeeded:
+                warnings.warn(f"failed to interpolate unconfident timestamps at frame {self.trainer.predict_dataloaders.dataset.start_frm_idx} to {self.trainer.predict_dataloaders.dataset.start_frm_idx + len(interp_ts) - 1} in video {self.trainer.predict_dataloaders.dataset.vid_idx} of camera {self.trainer.predict_dataloaders.dataset.cam_name}")
             util.write_interp_result(
                 self.trainer.predict_dataloaders.dataset.cam_name,
                 self.trainer.predict_dataloaders.dataset.vid_idx,
