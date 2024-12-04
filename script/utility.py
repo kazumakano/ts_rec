@@ -473,6 +473,10 @@ def read_head_n_frms(file: str, n: int, skip_one_by_one: bool = False, start_idx
 def str2time(ts: str) -> time:
     return datetime.strptime(ts, "%H:%M:%S").time()
 
+def str2sec(ts: str) -> int:
+    ts = str2time(ts)
+    return 3600 * ts.hour + 60 * ts.minute + ts.second
+
 def str2unix(date: date, time: pd.Series) -> np.ndarray:
     ts = np.empty(len(time), dtype=np.float64)
     for i, t in enumerate(time):
