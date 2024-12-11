@@ -367,8 +367,7 @@ def load_param(file_or_stream: str | io.StringIO) -> dict[str, Param | list[Para
         raise Exception(f"only 'str' or 'StringIO' is supported but {type(file_or_stream)} was given")
 
 def load_test_result(result_dir: str, ver: int = 0) -> tuple[tuple[np.ndarray, np.ndarray, np.ndarray], dict[str, Param]]:
-    with open(path.join(result_dir, f"version_{ver}/", "test_outputs.pkl"), mode="rb") as f:
-        return pickle.load(f), load_param(path.join(result_dir, f"version_{ver}/", "hparams.yaml"))
+    return tuple(np.load(path.join(result_dir, f"version_{ver}/", "test_outputs.npz")).values()), load_param(path.join(result_dir, f"version_{ver}/", "hparams.yaml"))
 
 def read_date(result_dir: str) -> date:
     with open(path.join(result_dir, "date.txt")) as f:

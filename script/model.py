@@ -52,8 +52,7 @@ class _BaseModule(pl.LightningModule):
             estim = np.vstack((estim, o[1].cpu().numpy()))
             truth = np.hstack((truth, o[2].squeeze().cpu().numpy()))
 
-        with open(path.join(self.logger.log_dir, "test_outputs.pkl"), mode="wb") as f:
-            pickle.dump((img, estim, truth), f)
+        np.savez_compressed(path.join(self.logger.log_dir, "test_outputs.npz"), img=img, estim=estim, truth=truth)
 
     def on_predict_start(self) -> None:
         self.predict_outputs = []
