@@ -34,7 +34,7 @@ def _predict_by_file(ckpt_file: str, param: dict[str, util.Param], result_dir: s
     model = M.get_model_cls(param["arch"], True).load_from_checkpoint(
         ckpt_file,
         map_location=torch.device("cuda", 0),
-        param=param,
+        param={**param, "max_frm_num": MAX_FRM_NUM},
         loss_weight=torch.empty(10, dtype=torch.float32) if param["enable_loss_weight"] else None
     )
     trainer = pl.Trainer(
