@@ -22,7 +22,7 @@ class _BaseModule(pl.LightningModule):
         if param is not None:
             self.save_hyperparameters(param)
 
-    def configure_optimizers(self) -> optim.SGD:
+    def configure_optimizers(self) -> optim.Adam:
         return optim.Adam(self.parameters(), lr=self.hparams["learning_rate"])
 
     def training_step(self, batch: list[torch.Tensor]) -> torch.Tensor:
