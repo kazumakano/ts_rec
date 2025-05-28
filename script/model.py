@@ -222,7 +222,7 @@ class VGG8(_BaseModule):
         hidden = F.dropout(F.relu(self.conv_6(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_7(hidden)), p=self.hparams["conv_dp"], training=self.training)
         hidden = F.dropout(F.relu(self.conv_8(hidden)), p=self.hparams["conv_dp"], training=self.training)
-        hidden = F.relu(self.fc_1(hidden.flatten(start_dim=1)))
+        hidden = F.dropout(F.relu(self.fc_1(hidden.flatten(start_dim=1))), p=self.hparams["fc_dp"], training=self.training)
         output = self.fc_2(hidden)
 
         return output
