@@ -18,11 +18,11 @@ def train(csv_split_file: str, gpu_id: int, param_file: str, ts_fig_dirs: list[s
     model_cls = M.get_model_cls(param["arch"])
 
     trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=[gpu_id],
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
         callbacks=ModelCheckpoint(monitor="validation_loss", save_last=True, save_top_k=3),
-        devices=[gpu_id],
-        max_epochs=param["epoch"],
-        accelerator="gpu"
+        max_epochs=param["epoch"]
     )
     datamodule = DataModule4CsvAndTsFig(csv_split_file, vid_dir, ts_fig_dirs, param, trainer.log_dir)
 

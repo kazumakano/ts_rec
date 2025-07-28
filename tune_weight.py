@@ -27,11 +27,11 @@ def tune_weight(ckpt_file: str, gpu_id: int, param_file: str, src_csv_split_file
     tgt_datamodule.val_files = tgt_datamodule.train_files
 
     trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=[gpu_id],
         logger=TensorBoardLogger(util.get_result_dir(result_dir_name), name=None, default_hp_metric=False),
         callbacks=ModelCheckpoint(save_top_k=-1, every_n_epochs=param["epoch"] // 10),
-        devices=[gpu_id],
-        max_epochs=param["epoch"],
-        accelerator="gpu"
+        max_epochs=param["epoch"]
     )
     trainer.fit(
         model,
